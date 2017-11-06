@@ -11,9 +11,9 @@ from matplotlib.patches import Rectangle
 
 from rllab.misc import logger
 
-from rlutil.envs.gridcraft.utils import flat_to_one_hot
-from rlutil.envs.gridcraft import log_utils
-from rlutil.utils.math_utils import np_seed
+from rlutil.envs.env_utils import flat_to_one_hot
+import rlutil.log_utils as log_utils
+from rlutil.math_utils import np_seed
 
 class DiscreteEnv(gym.Env):
     def __init__(self, transition_matrix, reward, init_state, terminate_on_reward=False,

@@ -112,8 +112,8 @@ class CustomGymEnv(RllabGymEnv):
                  post_create_env_seed=None):
         Serializable.quick_init(self, locals())
         if register_fn is None:
-            import inverse_rl.envs
-            register_fn = inverse_rl.envs.register_custom_envs
+            import rlutil.envs
+            register_fn = rlutil.envs.register_envs
         register_fn()  # Force register
         self.env_name = env_name
         super(CustomGymEnv, self).__init__(env_name, wrappers=gym_wrappers,

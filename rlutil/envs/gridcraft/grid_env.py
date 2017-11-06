@@ -7,7 +7,7 @@ from matplotlib.patches import Rectangle
 
 from rllab.misc import logger
 
-from rlutil.envs import log_utils
+import rlutil.log_utils as log_utils
 from rlutil.envs.gridcraft.grid_spec import *
 from rlutil.envs.gridcraft.utils import one_hot_to_flat, flat_to_one_hot
 
