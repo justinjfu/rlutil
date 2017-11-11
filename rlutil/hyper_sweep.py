@@ -13,6 +13,7 @@ or
 run_sweep_serial(func, args)
 
 """
+import os
 import itertools
 import multiprocessing
 import random
@@ -40,9 +41,11 @@ def run_sweep_serial(run_method, params, repeat=1):
     for config in sweeper:
         run_method(**config)
 
+
 def kwargs_wrapper(args_method):
     args, method = args_method
     return method(**args)
+
 
 def run_sweep_parallel(run_method, params, repeat=1, num_cpu=multiprocessing.cpu_count()):
     sweeper = Sweeper(params, repeat)
@@ -54,13 +57,27 @@ def run_sweep_parallel(run_method, params, repeat=1, num_cpu=multiprocessing.cpu
     pool.map(kwargs_wrapper, exp_args)
 
 
-def example_run_method(exp_name, param1, param2='a', param3=3, param4=4):
-    import time
-    time.sleep(1.0)
-    print(exp_name, param1, param2, param3, param4)
+THIS_FILE_DIR = os.path.dirname(__file__)
+SCRIPTS_DIR = os.path.join(os.path.dirname(THIS_FILE_DIR), 'scripts')
+def run_sweep_doodad(run_method, params, run_mode, mounts, repeat=1):
+    import doodad
+    sweeper = Sweeper(params, repeat)
+    for config in sweeper:
+        run_method_args = lambda: run_method(**config)
+        doodad.launch_python(
+                target = os.path.join(SCRIPTS_DIR, 'run_experiment_lite_doodad.py'),
+                mode=mode,
+                mount_points=mounts,
+                use_cloudpickle=True,
+                args = {'run_method': run_method_args}
+        }
 
 
 if __name__ == "__main__":
+    def example_run_method(exp_name, param1, param2='a', param3=3, param4=4):
+        import time
+        time.sleep(1.0)
+        print(exp_name, param1, param2, param3, param4)
     sweep_op = {
         'param1': [1e-3, 1e-2, 1e-1],
         'param2': [1,5,10,20],
