@@ -52,8 +52,8 @@ MAZE3 = spec_from_string("OOOOOO\\"+
                          "OOOOOO\\"
                          )
 
-MAZE_LAVA = spec_from_string("OOOOOOOO4\\"+
-                             "SOLLLLLLL\\"+
-                             "OOOOOOOOO\\"+
-                             "OOOOOOOOR\\"
+MAZE_LAVA = spec_from_string("OOOOOO3\\"+
+                             "SOLLLLL\\"+
+                             "OOOOOOO\\"+
+                             "OOOOOOR\\"
                          )

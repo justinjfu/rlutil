@@ -39,12 +39,13 @@ class TransitionModel(object):
     def get_aprobs(self, s, a):
         # TODO: could probably output a matrix over all states...
         legal_moves = self.__get_legal_moves(s)
+        p = np.zeros(len(ACT_DICT))
+        p[legal_moves] = self.eps / (len(legal_moves))
         if a in legal_moves:
-            p = np.zeros(len(ACT_DICT))
-            p[legal_moves] = self.eps / (len(legal_moves)-1)
-            p[a] = 1.0-self.eps
+            p[a] += 1.0-self.eps
         else:
-            p = np.array([1.0,0,0,0,0])  # NOOP
+            #p = np.array([1.0,0,0,0,0])  # NOOP
+            p[ACT_NOOP] += 1.0-self.eps
         return p
 
     def __get_legal_moves(self, s):
@@ -78,61 +79,6 @@ class RewardFunction(object):
         return 0.0
 
 
-class ObservationModel(object):
-    def state_to_obs(self, state, gs):
-        raise NotImplementedError()
-
-    def to_state(self, obs, gs, env_info):
-        raise NotImplementedError()
-
-
-class OneHotObsModel(ObservationModel):
-    def __init__(self, coordinatewise=False, add_eyes=False):
-        self.cwise = coordinatewise
-        self.add_eyes = add_eyes
-
-    def state_to_obs(self, state, gs):
-        if self.cwise:
-            xy = gs.idx_to_xy(state)
-            x = flat_to_one_hot(xy[0], gs.width)
-            y = flat_to_one_hot(xy[1], gs.height)
-            obs = np.r_[x, y]
-        else:
-            obs = flat_to_one_hot(state, len(gs))
-
-        if self.add_eyes:
-            # detect neighboring walls
-            neighbors = gs.get_neighbors(state)
-            wall_eyes = np.array([1 if (nb in [WALL, OUT_OF_BOUNDS]) else 0 for nb in neighbors])
-            rew_eyes = np.array([1 if (nb in [REWARD]) else 0 for nb in neighbors])
-            obs = np.r_[wall_eyes, rew_eyes, obs]
-        return obs
-
-    def to_state(self, obs, gs, env_info):
-        if self.add_eyes: #remove eyes
-            obs = obs[:, 8:]
-        if self.cwise:
-            x = obs[:, :gs.width]
-            y = obs[:, gs.width:]
-            x = one_hot_to_flat(x)
-            y = one_hot_to_flat(y)
-            state = gs.xy_to_idx(np.c_[x,y])
-        else:
-            state = one_hot_to_flat(obs)
-        return state
-
-
-class LocalObs(object):
-    def __init__(self):
-        pass
-
-    def state_to_obs(self, state, gs):
-        raise NotImplementedError()
-
-    def obs_to_state(self, obs, gs):
-        raise ValueError("Cannot convert local obs to state")
-
-
 class GridEnv(gym.Env):
     def __init__(self, gridspec, tiles=TILES,
                  rew_fn=None,
@@ -147,6 +93,21 @@ class GridEnv(gym.Env):
         self.max_timesteps = max_timesteps
         self._timestep = 0
         super(GridEnv, self).__init__()
+
+    def get_transitions(self, s, a):
+        tile_type = self.gs[self.gs.idx_to_xy(s)]
+        if tile_type == LAVA: # Lava gets you stuck
+            return {s: 1.0}
+
+        aprobs = self.model.get_aprobs(s, a)
+        t_dict = {}
+        for sa in range(5):
+            if aprobs[sa] > 0:
+                next_s = self.gs.idx_to_xy(s) + ACT_DICT[sa]
+                next_s_idx = self.gs.xy_to_idx(next_s)
+                t_dict[next_s_idx] = t_dict.get(next_s_idx, 0.0) + aprobs[sa]
+        return t_dict
+
 
     def step_stateless(self, s, a, verbose=False):
         aprobs = self.model.get_aprobs(s, a)

@@ -156,3 +156,6 @@ class GridSpec(object):
         else:
             raise NotImplementedError()
 
+    def __hash__(self):
+        data = (self.__w, self.__h) + tuple(self.__data.reshape([-1]).tolist())
+        return hash(data)
