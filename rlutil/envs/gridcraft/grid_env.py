@@ -64,14 +64,15 @@ class RewardFunction(object):
         if rew_map is None:
             rew_map = {
                 REWARD: 1.0,
-                REWARD2: 0.5,
-                REWARD3: 0.1,
-                REWARD4: -1
+                REWARD2: 2.0,
+                REWARD3: 4.0,
+                REWARD4: 8.0,
+                LAVA: -1.0,
             }
         self.rew_map = rew_map
 
     def __call__(self, gridspec, s, a, ns):
-        val = gridspec[gridspec.idx_to_xy(ns)]
+        val = gridspec[gridspec.idx_to_xy(s)]
         if val in self.rew_map:
             return self.rew_map[val]
         return 0.0
@@ -133,23 +134,18 @@ class LocalObs(object):
 
 
 class GridEnv(gym.Env):
-    def __init__(self, gridspec, tiles=TILES, rew_fn=None, one_hot=False,
-                 add_eyes=False, teps=0.0, coordinate_wise=False, frameskip=None,
-                 terminate_on_reward=False,
-                 zero_reward=False):
+    def __init__(self, gridspec, tiles=TILES,
+                 rew_fn=None,
+                 teps=0.0, 
+                 max_timesteps=None):
         self.gs = gridspec
-        assert teps == 0.0, "Must use deterministic transitions"
         self.model = TransitionModel(gridspec, eps=teps)
-        self.one_hot = one_hot
         if rew_fn is None:
             rew_fn = RewardFunction()
         self.rew_fn = rew_fn
-        self.eyes = add_eyes
-        self.coordinatewise = coordinate_wise
-        self.frameskip = frameskip
-        self.zero_reward = zero_reward
-        self.terminate_on_reward = terminate_on_reward
         self.possible_tiles = tiles
+        self.max_timesteps = max_timesteps
+        self._timestep = 0
         super(GridEnv, self).__init__()
 
     def step_stateless(self, s, a, verbose=False):
@@ -157,38 +153,27 @@ class GridEnv(gym.Env):
         samp_a = np.random.choice(range(5), p=aprobs)
 
         next_s = self.gs.idx_to_xy(s) + ACT_DICT[samp_a]
+        tile_type = self.gs[self.gs.idx_to_xy(s)]
+        if tile_type == LAVA: # Lava gets you stuck
+            next_s = self.gs.idx_to_xy(s)
+
         next_s_idx = self.gs.xy_to_idx(next_s)
         rew = self.rew_fn(self.gs, s, samp_a, next_s_idx)
 
         if verbose:
             print('Act: %s. Act Executed: %s' % (ACT_TO_STR[a], ACT_TO_STR[samp_a]))
-
         return next_s_idx, rew
 
     def step(self, a, verbose=False):
-        if self.frameskip is not None:
-            ns = self.__state
-            r = 0
-            states_visited = []
-            for _ in range(self.frameskip):
-                ns, r = self.step_stateless(ns, a, verbose=verbose)
-                states_visited.append(ns)
-            traj_infos = {'frameskip_states': np.array(states_visited),
-                          'frameskip_observations': np.array([self.state_to_obs(state) for state in states_visited]),
-                          'frameskip_actions': np.array([a]*self.frameskip)}
-        else:
-            ns, r = self.step_stateless(self.__state, a, verbose=verbose)
-            traj_infos = {}
+        ns, r = self.step_stateless(self.__state, a, verbose=verbose)
+        traj_infos = {}
         self.__state = ns
-        obs = self.state_to_obs(ns)
-
-        if self.zero_reward:
-            traj_infos['task_reward'] = r
-            r = 0.0
+        obs = flat_to_one_hot(ns, len(self.gs))
 
         done = False
-        if self.terminate_on_reward:
-            if r > 0:
+        self._timestep += 1
+        if self.max_timesteps is not None:
+            if self._timestep >= self.max_timesteps:
                 done = True
 
         return obs, r, done, traj_infos
@@ -198,53 +183,8 @@ class GridEnv(gym.Env):
         start_idx = start_idxs[np.random.randint(0, start_idxs.shape[0])]
         start_idx = self.gs.xy_to_idx(start_idx)
         self.__state =start_idx
-        return self.state_to_obs(start_idx)
-
-    def state_to_obs(self, state):
-        if self.one_hot:
-            if self.coordinatewise:
-                xy = self.gs.idx_to_xy(state)
-                x = flat_to_one_hot(xy[0], self.gs.width)
-                y = flat_to_one_hot(xy[1], self.gs.height)
-                obs = np.r_[x, y]
-            else:
-                obs = flat_to_one_hot(state, len(self.gs))
-
-            if self.eyes:
-                # detect neighboring walls
-                neighbors = self.gs.get_neighbors(state)
-                wall_eyes = np.array([1 if (nb in [WALL, OUT_OF_BOUNDS]) else 0 for nb in neighbors])
-                rew_eyes = np.array([1 if (nb in [REWARD]) else 0 for nb in neighbors])
-                obs = np.r_[wall_eyes, rew_eyes, obs]
-        else:
-            obs = state
-        return obs
-
-    def obs_to_state(self, obs):
-
-        expanded = False
-        if len(obs.shape) == 1:
-            obs = np.expand_dims(obs, axis=0)
-            expanded = True
-
-        if self.one_hot:
-            if self.eyes: #remove eyes
-                obs = obs[:, 8:]
-            if self.coordinatewise:
-                x = obs[:, :self.gs.width]
-                y = obs[:, self.gs.width:]
-                x = one_hot_to_flat(x)
-                y = one_hot_to_flat(y)
-                state = self.gs.xy_to_idx(np.c_[x,y])
-            else:
-                state = one_hot_to_flat(obs)
-        else:
-            state = obs
-
-        if expanded:
-            state = state[0]
-
-        return state
+        self._timestep = 0
+        return flat_to_one_hot(start_idx, len(self.gs))
 
     def get_tile(self, obs):
         idx = self.obs_to_state(obs)
@@ -274,14 +214,7 @@ class GridEnv(gym.Env):
     @property
     def observation_space(self):
         dO = len(self.gs)
-        if self.one_hot:
-            if self.coordinatewise:
-                dO = self.gs.width + self.gs.height
-            if self.eyes:
-                dO += 8
-            return gym.spaces.Box(0,1,shape=dO)
-        else:
-            return gym.spaces.Discrete(dO)
+        return gym.spaces.Box(0,1,shape=dO)
 
     def log_diagnostics(self, paths):
         Ntraj = len(paths)
@@ -292,12 +225,6 @@ class GridEnv(gym.Env):
         states_visited = np.sum(state_count>0, axis=-1)
         #log states visited
         logger.record_tabular('AvgStatesVisited', np.mean(states_visited))
-
-
-        if self.zero_reward:
-             task_reward = np.array([traj['env_infos']['task_reward'] for traj in paths])
-             logger.record_tabular('ZeroedTaskReward', np.mean(np.sum(task_reward, axis=1)))
-
 
     def plot_trajs(self, paths, dirname=None, itr=0):
         plt.figure()
@@ -322,10 +249,7 @@ class GridEnv(gym.Env):
             plt.scatter(rew_positions[:,0], self.gs.height-rew_positions[:,1]-1, color=val_to_color[key])
 
         for path in paths:
-            if self.frameskip:
-                obses = path['env_infos']['frameskip_states'].flatten()
-            else:
-                obses = self.obs_to_state(path['observations'])
+            obses = self.obs_to_state(path['observations'])
             xys = self.gs.idx_to_xy(obses)
             # plot x, y positions
             plt.plot(xys[:,0], self.gs.height-xys[:,1]-1)

@@ -1,7 +1,16 @@
 import numpy as np
-from rlutil.envs.gridcraft import REWARD
+from rlutil.envs.gridcraft.grid_env import REWARD, GridEnv
 from rlutil.envs.wrappers import ObsWrapper
 from gym.spaces import Box
+
+
+class GridObsWrapper(ObsWrapper):
+    def __init__(self, env):
+        super(GridObsWrapper, self).__init__(env)
+
+    def render(self):
+        self.env.render()
+
 
 
 class EyesWrapper(ObsWrapper):
@@ -59,3 +68,50 @@ class EyesWrapper(ObsWrapper):
     @property
     def observation_space(self):
         return self.__observation_space
+
+
+class CoordinateWiseWrapper(GridObsWrapper):
+    def __init__(self, env):
+        assert isinstance(env, GridEnv)
+        super(CoordinateWiseWrapper, self).__init__(env)
+        self.gs = env.gs
+        self.dO = self.gs.width+self.gs.height
+
+        self.__observation_space = Box(0, 1, self.dO)
+
+    def wrap_obs(self, obs, info=None):
+        state = one_hot_to_flat(obs)
+        xy = self.gs.idx_to_xy(state)
+        x = flat_to_one_hot(xy[0], self.gs.width)
+        y = flat_to_one_hot(xy[1], self.gs.height)
+        obs = np.r_[x, y]
+        return obs
+
+    def unwrap_obs(self, obs, info=None):
+
+        if len(obs.shape) == 1:
+            x = obs[:self.gs.width]
+            y = obs[self.gs.width:]
+            x = one_hot_to_flat(x)
+            y = one_hot_to_flat(y)
+            state = self.gs.xy_to_idx(np.c_[x,y])
+            return flat_to_one_hot(state, self.dO)
+        else:
+            raise NotImplementedError()
+
+
+class RandomObsWrapper(GridObsWrapper):
+    def __init__(self, env, dO):
+        assert isinstance(env, GridEnv)
+        super(RandomObsWrapper, self).__init__(env)
+        self.gs = env.gs
+        self.dO = dO
+        self.obs_matrix = np.random.randn(self.dO, len(self.gs))
+        self.__observation_space = Box(np.min(self.obs_matrix), np.max(self.obs_matrix), self.dO)
+
+    def wrap_obs(self, obs, info=None):
+        return np.inner(self.obs_matrix, obs)
+
+    def unwrap_obs(self, obs, info=None):
+        raise NotImplementedError()
+

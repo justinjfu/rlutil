@@ -9,17 +9,19 @@ OUT_OF_BOUNDS = 114
 REWARD2 = 115
 REWARD3 = 116
 REWARD4 = 117
+LAVA = 118
 
-TILES = {EMPTY, WALL, START, REWARD, REWARD2, REWARD3, REWARD4}
+TILES = {EMPTY, WALL, START, REWARD, REWARD2, REWARD3, REWARD4, LAVA}
 
 STR_MAP = {
     'O': EMPTY,
     '#': WALL,
     'S': START,
-    'R': REWARD,  # 1
-    '2': REWARD2,  # 0.5
-    '3': REWARD3,  # 0.1
-    '4': REWARD4   # -1
+    'R': REWARD,
+    '2': REWARD2,
+    '3': REWARD3,
+    '4': REWARD4,
+    'L': LAVA
 }
 
 RENDER_DICT = {v:k for k, v in STR_MAP.items()}

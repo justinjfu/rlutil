@@ -2,6 +2,7 @@ from gym.envs.registration import register
 import logging
 
 from rlutil.envs.gridcraft.mazes import *
+from rlutil.envs.env_utils import CustomGymEnv
 from rlutil.envs.tabular.simple_env import random_env_register
 
 LOGGER = logging.getLogger(__name__)
@@ -15,7 +16,7 @@ def register_envs():
 
     LOGGER.info("Registering custom gym environments")
     register(id='GridMaze1-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
-             kwargs={'one_hot': True, 'add_eyes': True, 'gridspec': MAZE1})
+            kwargs={'one_hot': True, 'max_timesteps': 10, 'gridspec': MAZE1})
     register(id='GridMaze3-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
              kwargs={'one_hot': True, 'add_eyes': True, 'gridspec': MAZE3})
     register(id='Tabular32x4-v0', entry_point='rlutil.envs.tabular.simple_env:DiscreteEnv',
