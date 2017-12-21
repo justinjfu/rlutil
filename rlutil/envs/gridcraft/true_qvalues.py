@@ -3,6 +3,8 @@ import sys
 import numpy as np
 import hashlib
 from rlutil.log_utils import DATA_DIR
+from rlutil.envs.gridcraft.grid_env import GridEnv 
+from rlutil.envs.gridcraft.utils import one_hot_to_flat, flat_to_one_hot
 
 SAVE_DIR = os.path.join(DATA_DIR, 'gridcraft_qvals')
 
@@ -58,13 +60,28 @@ def dense_tabular_solver(gridspec, env_args, K=50, gamma=0.95, verbose=False, sa
     return q_values
 
 
-def load_qvals(gridspec, env_args, gamma=0.95):
+class QFunc(object):
+    def __init__(self, q_arr):
+        self._q_arr = q_arr
+        self._q_vec = np.reshape(q_arr, [-1])
+
+    def __call__(self, s, a):
+        s_idxs = one_hot_to_flat(s)
+        return self._q_arr[s_idxs, a]
+
+
+def load_qvals(gridspec, env_args, gamma=0.95, cache=False):
     fname = os.path.join(SAVE_DIR, hash_env(gridspec, env_args, gamma=gamma))
-    if os.path.exists(fname):
-        return np.loadtxt(fname, delimiter=',')
+    if cache and os.path.exists(fname):
+        q_arr = np.loadtxt(fname, delimiter=',')
     else:
         print('true_qvalues.py: Running tabular solver...')
-        return dense_tabular_solver(gridspec, env_args=env_args, K=500, save=True)
+        if env_args['max_timesteps'] is not None:
+            K = env_args['max_timesteps']
+        else:
+            K = 500
+        q_arr = dense_tabular_solver(gridspec, env_args=env_args, K=K, save=cache)
+    return QFunc(q_arr)
 
 
 def plot_qval(gs, q_values):

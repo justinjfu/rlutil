@@ -1,5 +1,8 @@
-import numpy as np
+import inspect
+import itertools
 import sys
+
+import numpy as np
 import gym
 import gym.spaces
 import matplotlib.pyplot as plt
@@ -80,10 +83,12 @@ class RewardFunction(object):
 
 
 class GridEnv(gym.Env):
-    def __init__(self, gridspec, tiles=TILES,
+    def __init__(self, gridspec, 
+                 tiles=TILES,
                  rew_fn=None,
                  teps=0.0, 
                  max_timesteps=None):
+        self._env_args = {'teps': teps, 'max_timesteps': max_timesteps}
         self.gs = gridspec
         self.model = TransitionModel(gridspec, eps=teps)
         if rew_fn is None:
@@ -92,6 +97,7 @@ class GridEnv(gym.Env):
         self.possible_tiles = tiles
         self.max_timesteps = max_timesteps
         self._timestep = 0
+        self._true_q = None  # q_vals for debugging
         super(GridEnv, self).__init__()
 
     def get_transitions(self, s, a):
@@ -136,7 +142,6 @@ class GridEnv(gym.Env):
         if self.max_timesteps is not None:
             if self._timestep >= self.max_timesteps:
                 done = True
-
         return obs, r, done, traj_infos
 
     def reset(self):
@@ -223,6 +228,47 @@ class GridEnv(gym.Env):
             log_utils.record_fig('trajs_itr%d'%itr, subdir=dirname, rllabdir=True)
         else:
             plt.show()
+
+    def debug_qval(self, q_func, obses=None, acts=None, gamma=0.95):
+        # q_func: f(s, a) => double
+
+        # get all states
+        _obses = []
+        _acts = []
+        for (x, y, a) in itertools.product(range(self.gs.width), range(self.gs.height), range(5)):
+            obs = flat_to_one_hot(self.gs.xy_to_idx((x, y)), ndim=len(self.gs))
+            act = a #flat_to_one_hot(a, ndim=5)
+            _obses.append(obs)
+            _acts.append(act)
+        _obses = np.array(_obses)
+        _acts = np.array(_acts)
+
+        # eval q
+        qvals = q_func(_obses, _acts)
+
+        # true q
+        if self._true_q is None:
+            from rlutil.envs.gridcraft.true_qvalues import load_qvals
+            self._true_q = load_qvals(self.gs, self._env_args, gamma=gamma)
+        true_qvals = self._true_q._q_vec
+
+        # log errors
+        q_err = np.abs(qvals - true_qvals)
+        logger.record_tabular('QStarErrorMean', np.mean(q_err))
+        logger.record_tabular('QStarErrorMax', np.max(q_err))
+        logger.record_tabular('QStarErrorMin', np.min(q_err))
+
+        if obses is not None and acts is not None:
+            qvals = q_func(obses, acts)
+            true_qvals = self._true_q(obses, acts)
+            q_err = np.abs(qvals - true_qvals)
+            logger.record_tabular('QStarSampledErrorMean', np.mean(q_err))
+            logger.record_tabular('QStarSampeldErrorMax', np.max(q_err))
+            logger.record_tabular('QStarSampledErrorMin', np.min(q_err))
+        else:
+            logger.record_tabular('QStarSampledErrorMean', float('NaN'))
+            logger.record_tabular('QStarSampeldErrorMax', float('NaN'))
+            logger.record_tabular('QStarSampledErrorMin', float('NaN'))
 
 
     def plot_costs(self, paths, cost_fn, dirname=None, itr=0, policy=None,

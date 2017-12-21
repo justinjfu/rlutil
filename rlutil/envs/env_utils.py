@@ -143,6 +143,13 @@ class CustomGymEnv(RllabGymEnv):
         else:
             raise ValueError('Env %s has no traj plotting'% self.env)
 
+    @overrides
+    def debug_qval(self, *args, **kwargs):
+        if hasattr(self.env, 'debug_qval'):
+            self.env.debug_qval(*args, **kwargs)
+        else:
+            pass
+
     @property
     def wrapped_observation_space(self):
         if hasattr(self.env, 'wrapped_observation_space'):

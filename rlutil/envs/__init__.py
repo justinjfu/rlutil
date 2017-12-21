@@ -16,9 +16,9 @@ def register_envs():
 
     LOGGER.info("Registering custom gym environments")
     register(id='GridMaze1-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
-            kwargs={'one_hot': True, 'max_timesteps': 10, 'gridspec': MAZE1})
-    register(id='GridMaze3-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
-             kwargs={'one_hot': True, 'add_eyes': True, 'gridspec': MAZE3})
+            kwargs={'gridspec': MAZE1})
+    register(id='GridMazeLava-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
+            kwargs={'gridspec': MAZE_LAVA, 'max_timesteps': 20, 'teps': 0.1})
     register(id='Tabular32x4-v0', entry_point='rlutil.envs.tabular.simple_env:DiscreteEnv',
              kwargs=random_env_register(32, 4, seed=0))
     register(id='Tabular16x4-v0', entry_point='rlutil.envs.tabular.simple_env:DiscreteEnv',
