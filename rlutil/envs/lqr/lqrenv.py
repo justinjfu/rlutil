@@ -129,7 +129,7 @@ class PointmassEnvTorque(LQREnv):
 
 
 class PointmassEnvVision(PointmassEnvTorque):
-    def __init__(self, **kwarwgs, im_width=64, im_height=64):
+    def __init__(self, im_width=64, im_height=64, **kwargs):
         self.w = im_width
         self.h = im_height
         super(PointmassEnvVision, self).__init__(**kwargs)

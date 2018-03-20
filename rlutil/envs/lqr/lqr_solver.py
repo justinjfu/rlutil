@@ -1,16 +1,15 @@
 import numpy as np
 import scipy as sp
 
-def lqr_inf(
-
-        ):
+def lqr_inf(Fm, fv, Cm, cv, discount=0.99, K=100):
     """
     Infinite Horizon LQR
     """
-    raise NotImplementedError()
+    K, k, Vxx, Vx, Qtt, Qt = lqr_fin(K, Fm, fv, Cm, cv, discount=discount)
+    return K[0], k[0], Vxx[0], Vx[0], Qtt[0], Qt[0]
 
 
-def lqr_fin(T, Fm, fv, Cm, cv):
+def lqr_fin(T, Fm, fv, Cm, cv, discount=1.0):
     """
     Discrete time, finite horizon LQR solver
 
@@ -55,10 +54,8 @@ def lqr_fin(T, Fm, fv, Cm, cv):
 
         # Add in the value function from the next time step.
         if t < T - 1:
-            #Qtt[t] += Fm[t, :, :].T.dot(Vxx[t+1, :, :]).dot(Fm[t, :, :])
-            #Qt[t] += Fm[t, :, :].T.dot(Vx[t+1, :] + Vxx[t+1, :, :].dot(fv[t, :]))
-            Qtt[t] += Fm.T.dot(Vxx[t+1, :, :]).dot(Fm)
-            Qt[t] += Fm.T.dot(Vx[t+1, :] + Vxx[t+1, :, :].dot(fv))
+            Qtt[t] += Fm.T.dot(discount*Vxx[t+1, :, :]).dot(Fm)
+            Qt[t] += Fm.T.dot(discount*Vx[t+1, :] + discount*Vxx[t+1, :, :].dot(fv))
 
         # Symmetrize quadratic component.
         Qtt[t] = 0.5 * (Qtt[t] + Qtt[t].T)
@@ -88,7 +85,7 @@ def lqr_fin(T, Fm, fv, Cm, cv):
     return K, k, Vxx, Vx, Qtt, Qt
 
 
-def solve_lqr_env(lqrenv, T):
+def solve_lqr_env(lqrenv, T=None, discount=1.0):
     #Fm, fv, Cm, cv
     dX, dU = lqrenv.dO, lqrenv.dA
     Fm = lqrenv.dynamics
@@ -101,6 +98,9 @@ def solve_lqr_env(lqrenv, T):
 
     cv = np.zeros((dX+dU))
     cv[0:dX] = -lqrenv.rew_q
-    return lqr_fin(T, Fm, fv, Cm, cv)
+    if T is None:
+        return lqr_inf(Fm, fv, Cm, cv, discount=discount)
+    else:
+        return lqr_fin(T, Fm, fv, Cm, cv, discount=discount)
 
 
