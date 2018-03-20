@@ -96,7 +96,8 @@ class PointmassEnvVelocity(LQREnv):
 
 
 class PointmassEnvTorque(LQREnv):
-    def __init__(self, initial_pos=None, goal_pos=None, action_penalty=1e-2, dt=0.1, sim_steps=1, gains=10):
+    def __init__(self, initial_pos=None, goal_pos=None, 
+            action_penalty=1e-2, dt=0.1, sim_steps=1, gains=10):
         if initial_pos is None:
             initial_pos = np.zeros(2)
         if goal_pos is None:
@@ -125,6 +126,16 @@ class PointmassEnvTorque(LQREnv):
             rew_bias=rew_bias,
             frameskip=sim_steps
         )
+
+
+class PointmassEnvVision(PointmassEnvTorque):
+    def __init__(self, **kwarwgs, im_width=64, im_height=64):
+        self.w = im_width
+        self.h = im_height
+        super(PointmassEnvVision, self).__init__(**kwargs)
+
+    def _wrap_obs(self, x):
+        raise NotImplementedError()
 
 
 if __name__ == '__main__':
