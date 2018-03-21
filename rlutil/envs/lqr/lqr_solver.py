@@ -29,9 +29,9 @@ def lqr_fin(T, Fm, fv, Cm, cv, discount=1.0):
     Returns:
         K: Policy parameters (linear term)
         k: Policy parameters (bias term)
-        Vxx: Value function (quadratic term)
+        Vxx: Value function (quadratic term). The value is given by 0.5*x^T*Vxx*x + x^T*Vx (constant term is ignored)
         Vx: Value function (linear term)
-        Qtt: Q-value function (quadratic term)
+        Qtt: Q-value function (quadratic term). The Q-value is given by 0.5*[x, u]^T*Qtt*[x, u] + [x, u]^T*Qt (constant term is ignored)
         Qt: Q-value function (linear term)
     """
     dX, dXdU = Fm.shape
@@ -85,22 +85,23 @@ def lqr_fin(T, Fm, fv, Cm, cv, discount=1.0):
     return K, k, Vxx, Vx, Qtt, Qt
 
 
-def solve_lqr_env(lqrenv, T=None, discount=1.0):
+def solve_lqr_env(lqrenv, T=None, discount=1.0, solve_itrs=500):
     #Fm, fv, Cm, cv
     dX, dU = lqrenv.dO, lqrenv.dA
     Fm = lqrenv.dynamics
     fv = np.zeros(dX)
 
     Cm = np.zeros((dX+dU, dX+dU))
-    Cm[0:dX, 0:dX] = -lqrenv.rew_Q
-    Cm[dX:dX+dU, dX:dX+dU] = -lqrenv.rew_R
-    Cm = Cm*2
+    Cm[0:dX, 0:dX] = lqrenv.rew_Q
+    Cm[dX:dX+dU, dX:dX+dU] = lqrenv.rew_R
+    Cm = -2*Cm
 
     cv = np.zeros((dX+dU))
     cv[0:dX] = -lqrenv.rew_q
     if T is None:
-        return lqr_inf(Fm, fv, Cm, cv, discount=discount)
+        K, k, V, v, Q, q = lqr_inf(Fm, fv, Cm, cv, discount=discount, K=solve_itrs)
     else:
-        return lqr_fin(T, Fm, fv, Cm, cv, discount=discount)
+        K, k, V, v, Q, q = lqr_fin(T, Fm, fv, Cm, cv, discount=discount)
+    return K, k, -0.5*V, -v, -0.5*Q, -q
 
 

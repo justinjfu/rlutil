@@ -64,22 +64,23 @@ class TransitionModel(object):
 
 
 class RewardFunction(object):
-    def __init__(self, rew_map=None):
+    def __init__(self, rew_map=None, default=0):
         if rew_map is None:
             rew_map = {
                 REWARD: 1.0,
                 REWARD2: 2.0,
                 REWARD3: 4.0,
                 REWARD4: 8.0,
-                LAVA: -1.0,
+                LAVA: -100.0,
             }
+        self.default = default
         self.rew_map = rew_map
 
     def __call__(self, gridspec, s, a, ns):
         val = gridspec[gridspec.idx_to_xy(s)]
         if val in self.rew_map:
             return self.rew_map[val]
-        return 0.0
+        return self.default
 
 
 class GridEnv(gym.Env):
@@ -87,12 +88,16 @@ class GridEnv(gym.Env):
                  tiles=TILES,
                  rew_fn=None,
                  teps=0.0, 
-                 max_timesteps=None):
+                 max_timesteps=None,
+                 rew_map=None,
+                 terminal_states=None,
+                 default_rew=0):
         self._env_args = {'teps': teps, 'max_timesteps': max_timesteps}
         self.gs = gridspec
         self.model = TransitionModel(gridspec, eps=teps)
+        self.terminal_states = terminal_states
         if rew_fn is None:
-            rew_fn = RewardFunction()
+            rew_fn = RewardFunction(rew_map=rew_map, default=default_rew)
         self.rew_fn = rew_fn
         self.possible_tiles = tiles
         self.max_timesteps = max_timesteps

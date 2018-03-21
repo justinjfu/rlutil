@@ -2,6 +2,7 @@ from gym.envs.registration import register
 import logging
 
 from rlutil.envs.gridcraft.mazes import *
+from rlutil.envs.gridcraft.grid_spec import REWARD, LAVA
 from rlutil.envs.env_utils import CustomGymEnv
 from rlutil.envs.tabular.simple_env import random_env_register
 
@@ -19,6 +20,10 @@ def register_envs():
             kwargs={'gridspec': MAZE1})
     register(id='GridMazeLava-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
             kwargs={'gridspec': MAZE_LAVA, 'max_timesteps': 20, 'teps': 0.1})
+    register(id='GridMazeLavaEvent-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
+            kwargs={'gridspec': MAZE_LAVA, 'max_timesteps': 20, 'teps': 0.00,
+                    'rew_map': {REWARD:0, LAVA:-100}, 'default_rew': -100})
+
     register(id='Tabular32x4-v0', entry_point='rlutil.envs.tabular.simple_env:DiscreteEnv',
              kwargs=random_env_register(32, 4, seed=0))
     register(id='Tabular16x4-v0', entry_point='rlutil.envs.tabular.simple_env:DiscreteEnv',
