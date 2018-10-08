@@ -1,15 +1,16 @@
 from gym.envs.registration import register
 import logging
 
-from rlutil.envs.gridcraft.mazes import *
-from rlutil.envs.gridcraft.grid_spec import REWARD, LAVA
-from rlutil.envs.env_utils import CustomGymEnv
-from rlutil.envs.tabular.simple_env import random_env_register
 
 LOGGER = logging.getLogger(__name__)
 
 _REGISTERED = False
 def register_envs():
+    from rlutil.envs.gridcraft.mazes import *
+    from rlutil.envs.gridcraft.grid_spec import REWARD, LAVA
+    from rlutil.envs.env_utils import CustomGymEnv
+    from rlutil.envs.tabular.simple_env import random_env_register
+
     global _REGISTERED
     if _REGISTERED:
         return
