@@ -8,9 +8,8 @@ import gym.spaces
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-from rllab.misc import logger
-
-import rlutil.log_utils as log_utils
+from rlutil.logging import logger
+import rlutil.logging.log_utils as log_utils
 from rlutil.envs.gridcraft.grid_spec import *
 from rlutil.envs.gridcraft.utils import one_hot_to_flat, flat_to_one_hot
 
@@ -140,7 +139,7 @@ class GridEnv(gym.Env):
         ns, r = self.step_stateless(self.__state, a, verbose=verbose)
         traj_infos = {}
         self.__state = ns
-        obs = flat_to_one_hot(ns, len(self.gs))
+        obs = ns #flat_to_one_hot(ns, len(self.gs))
 
         done = False
         self._timestep += 1
@@ -155,7 +154,7 @@ class GridEnv(gym.Env):
         start_idx = self.gs.xy_to_idx(start_idx)
         self.__state =start_idx
         self._timestep = 0
-        return flat_to_one_hot(start_idx, len(self.gs))
+        return start_idx #flat_to_one_hot(start_idx, len(self.gs))
 
     def get_tile(self, obs):
         idx = self.obs_to_state(obs)
@@ -185,7 +184,8 @@ class GridEnv(gym.Env):
     @property
     def observation_space(self):
         dO = len(self.gs)
-        return gym.spaces.Box(0,1,shape=dO)
+        #return gym.spaces.Box(0,1,shape=dO)
+        return gym.spaces.Discrete(dO)
 
     def log_diagnostics(self, paths):
         Ntraj = len(paths)

@@ -20,6 +20,7 @@ cdef class TabularEnv(object):
     cpdef reward_matrix(self)
     cpdef set_state(self, int state)
     cpdef int get_state(self)
+    cpdef render(self)
 
 cdef class LinkedListEnv(TabularEnv):
     cdef double transition_noise

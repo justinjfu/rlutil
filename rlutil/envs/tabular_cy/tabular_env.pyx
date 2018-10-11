@@ -190,6 +190,10 @@ cdef class TabularEnv(object):
     cpdef int get_state(self):
         """Return the agent's internal state."""
         return self._state
+    
+    cpdef render(self):
+        """Render the current state of the environment."""
+        raise NotImplementedError()
 
 
 cdef class LinkedListEnv(TabularEnv):
@@ -210,7 +214,6 @@ cdef class LinkedListEnv(TabularEnv):
         self.transition_noise = transition_noise
 
     cdef map[int, double] transitions_cy(self, int state, int action):
-        cdef pair[int, double] transition
         self._transition_map.clear()
         if action == 0:
             self._transition_map.insert(pair[int, double](0, 1.0))

@@ -1,3 +1,5 @@
+import six
+
 CLSNAME = '__clsname__'
 _HYPER_ = '__hyper__'
 _HYPERNAME_ = '__hyper_clsname__'
@@ -31,12 +33,14 @@ class Hyperparametrized(type):
         return cls
 
 
-class HyperparamWrapper(object, metaclass=Hyperparametrized):
+@six.add_metaclass(Hyperparametrized)
+class HyperparamWrapper(object):
     def __init__(self, **hyper_kwargs):
         pass
 
 if __name__ == "__main__":
-    class Algo1(object, metaclass=Hyperparametrized):
+    @six.add_metaclass(Hyperparametrized)
+    class Algo1(object):
         def __init__(self, hyper1=1.0, hyper2=2.0, model1=None):
             pass
 
@@ -46,7 +50,8 @@ if __name__ == "__main__":
             super(Algo2, self).__init__(**kwargs)
 
 
-    class Model1(object, metaclass=Hyperparametrized):
+    @six.add_metaclass(Hyperparametrized)
+    class Model1(object):
         def __init__(self, hyper1=None):
             pass
 
