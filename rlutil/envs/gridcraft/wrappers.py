@@ -70,6 +70,7 @@ class EyesWrapper(ObsWrapper):
         return self.__observation_space
 
 
+"""
 class CoordinateWiseWrapper(GridObsWrapper):
     def __init__(self, env):
         assert isinstance(env, GridEnv)
@@ -98,6 +99,7 @@ class CoordinateWiseWrapper(GridObsWrapper):
             return flat_to_one_hot(state, self.dO)
         else:
             raise NotImplementedError()
+"""
 
 
 class RandomObsWrapper(GridObsWrapper):
@@ -107,7 +109,8 @@ class RandomObsWrapper(GridObsWrapper):
         self.gs = env.gs
         self.dO = dO
         self.obs_matrix = np.random.randn(self.dO, len(self.gs))
-        self.__observation_space = Box(np.min(self.obs_matrix), np.max(self.obs_matrix), self.dO)
+        self.__observation_space = Box(np.min(self.obs_matrix), np.max(self.obs_matrix), 
+            shape=(self.dO,), dtype=np.float32)
 
     def wrap_obs(self, obs, info=None):
         return np.inner(self.obs_matrix, obs)

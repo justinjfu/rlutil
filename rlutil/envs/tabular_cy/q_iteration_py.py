@@ -44,7 +44,7 @@ def q_iteration_dense(tabular_env,
     reward_matrix = tabular_env.reward_matrix()
     transition_rewards = np.sum(transition_matrix * reward_matrix, axis=2)
 
-    for i in range(num_itrs):
+    for _ in range(num_itrs):
         v_fn = compute_value_function(q_vals, ent_wt)
 
         new_q = transition_rewards + \

@@ -8,10 +8,30 @@ import gym
 import gym.spaces
 import numpy as np
 import cython
-cimport rlutil.envs.tabular_cy.tabular_env
+from rlutil.envs.tabular_cy.tabular_env cimport TimeStep
 
+from libc.math cimport fmin
 from libcpp.map cimport map, pair
+from libc.stdlib cimport rand
+cdef extern from "limits.h":
+    int INT_MAX
 from cython.operator cimport dereference, preincrement
+
+
+@cython.cdivision(True)
+cdef inline int sample_int(map[int, double] transitions):
+    cdef float randnum = rand() / float(INT_MAX)
+    cdef float total = 0
+    transitions_end = transitions.end()
+    transitions_it = transitions.begin()
+    while transitions_it != transitions_end:
+        ns = dereference(transitions_it).first
+        p = dereference(transitions_it).second
+        
+        if (p+total) >= randnum:
+            return ns
+        total += p
+        preincrement(transitions_it)
 
 
 cdef class TabularEnv(object):
@@ -49,11 +69,12 @@ cdef class TabularEnv(object):
           A python dict from {next state: probability}.
           (Omitted states have probability 0)
         """
-        self._transition_map.clear()
         return dict(self.transitions_cy(state, action))
 
     cdef map[int, double] transitions_cy(self, int state, int action):
-        raise NotImplementedError()
+        self._transition_map.clear()
+        self._transition_map.insert(pair[int, double](state, 1.0))
+        return self._transition_map
 
     cpdef double reward(self, int state, int action, int next_state):
         """Return the reward
@@ -63,7 +84,7 @@ cdef class TabularEnv(object):
           action: 
           next_state: 
         """
-        raise NotImplementedError()
+        return 0.0
 
     cpdef observation(self, int state):
         """Computes observation for a given state.
@@ -88,11 +109,13 @@ cdef class TabularEnv(object):
           done: A boolean indicating the end of an episode
           info: A debug info dictionary.
         """
-        next_state, reward, done, infos = self.step_state(action)
+        infos = {'state': self.get_state()}
+        next_state, reward, done = self.step_state(action)
         nobs = self.observation(next_state)
         return nobs, reward, done, infos
 
-    cpdef step_state(self, int action):
+    @cython.infer_types(True)
+    cdef TimeStep step_state(self, int action):
         """Simulates the environment by one timestep, returning the state id
         instead of the observation.
 
@@ -105,17 +128,14 @@ cdef class TabularEnv(object):
           done: A boolean indicating the end of an episode
           info: A debug info dictionary.
         """
-        if self.get_state() < 0:
-            raise ValueError("Environment not initialized. Call reset()")
         cdef int next_state
-        cdef dict transitions
-        transitions = self.transitions(self._state, action)
-        next_state = np.random.choice(
-            list(transitions.keys()), p=list(transitions.values()))
+        transitions = self.transitions_cy(self._state, action)
+        #next_state = np.random.choice(
+        #    list(transitions.keys()), p=list(transitions.values()))
+        next_state = sample_int(transitions)
         reward = self.reward(self.get_state(), action, next_state)
-        infos = {'state': self.get_state()}
-        self.set_state(next_state)
-        return next_state, reward, False, infos
+        self._state = next_state
+        return TimeStep(next_state, reward, False)
 
     cpdef reset(self):
         """Resets the state of the environment and returns an initial observation.
@@ -126,7 +146,7 @@ cdef class TabularEnv(object):
         initial_state = self.reset_state()
         return self.observation(initial_state)
 
-    cpdef int reset_state(self):
+    cdef int reset_state(self):
         """Resets the state of the environment and returns an initial state.
 
         Returns:
@@ -193,7 +213,7 @@ cdef class TabularEnv(object):
     
     cpdef render(self):
         """Render the current state of the environment."""
-        raise NotImplementedError()
+        pass
 
 
 cdef class LinkedListEnv(TabularEnv):
@@ -221,7 +241,7 @@ cdef class LinkedListEnv(TabularEnv):
             self._transition_map.insert(
                 pair[int, double](0, self.transition_noise))
             self._transition_map.insert(pair[int, double](
-                min(state + 1, self.num_states - 1), 1.0 - self.transition_noise))
+                    int(fmin(state + 1, self.num_states - 1)), 1.0 - self.transition_noise))
         return self._transition_map
 
     cpdef double reward(self, int state, int action, int next_state):

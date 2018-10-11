@@ -1,8 +1,8 @@
 from gym.envs.registration import register
-import logging
+#import logging
 
 
-LOGGER = logging.getLogger(__name__)
+#LOGGER = logging.getLogger(__name__)
 
 _REGISTERED = False
 def register_envs():
@@ -16,7 +16,7 @@ def register_envs():
         return
     _REGISTERED = True
 
-    LOGGER.info("Registering custom gym environments")
+    #LOGGER.info("Registering custom gym environments")
     register(id='GridMaze1-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
             kwargs={'gridspec': MAZE1})
     register(id='GridMazeLava-v0', entry_point='rlutil.envs.gridcraft.grid_env:GridEnv',
@@ -47,4 +47,4 @@ def register_envs():
              kwargs=random_env_register(64, 8, seed=0, deterministic=True, dim_obs=4))
 
 
-    LOGGER.info("Finished registering custom gym environments")
+    #LOGGER.info("Finished registering custom gym environments")

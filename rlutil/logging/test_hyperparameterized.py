@@ -3,6 +3,7 @@ import unittest
 
 from rlutil.logging.hyperparameterized import Hyperparametrized, extract_hyperparams, CLSNAME, HyperparamWrapper
 
+
 @six.add_metaclass(Hyperparametrized)
 class Algo1(object):
     def __init__(self, hyper1=1.0, hyper2=2.0, model1=None):

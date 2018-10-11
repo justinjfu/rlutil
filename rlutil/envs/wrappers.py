@@ -72,13 +72,13 @@ class Wrapper(Env):
     def is_latent_env_wrapper(self):
         return False
 
-    def _step(self, action):
+    def step(self, action):
         return self.env.step(action)
 
-    def _reset(self):
+    def reset(self):
         return self.env.reset()
 
-    def _render(self, mode='human', close=False):
+    def render(self, mode='human', close=False):
         if self.env is None:
             return
         return self.env.render(mode, close)
@@ -246,27 +246,3 @@ class ZeroObsWrapper(ObsWrapper):
 
     def unwrap_obs(self, obs, info=None):
         return info[self.obs_key]
-
-if __name__ == "__main__":
-    from guided_prop.envs.gridcraft.grid_spec import spec_from_string
-    from guided_prop.envs.gridcraft.grid_env import GridEnv, ACT_LEFT
-    from guided_prop.envs.gridcraft.wrappers import EyesWrapper
-    maze_spec = \
-        spec_from_string("OOOOOOOOOO\\"+
-                         "OOOOOOOOOO\\" +
-                         "OOROOSOORO\\" +
-                         "OOOOOOOOOO\\" +
-                         "ROOOOOOOOO\\"
-                         )
-    genv = GridEnv(maze_spec, one_hot=True, coordinate_wise=True)
-    env = EyesWrapper(genv)
-    env = ZeroObsWrapper(env, lo=0, hi=genv.observation_space.shape[0])
-    aspace = env.action_space
-
-    o = env.reset()
-    for a in [ACT_LEFT, ACT_LEFT, ACT_LEFT, ACT_LEFT]:
-        o, r, d, info = env.step(a)
-        print(o)
-        #print(env.unwrap_obs(o, info=info))
-        #print(env.env.unwrap_obs(o, info=info))
-
