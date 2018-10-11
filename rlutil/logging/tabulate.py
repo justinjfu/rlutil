@@ -6,23 +6,20 @@
 from collections import namedtuple
 from platform import python_version_tuple
 import re
+import six
 
 
+_int_type = int
+_float_type = float
+_text_type = str
+_none_type = type(None)
+from six.moves import izip_longest
 if python_version_tuple()[0] < "3":
-    from itertools import izip_longest
     from functools import partial
-    _none_type = type(None)
-    _int_type = int
-    _float_type = float
-    _text_type = str
     _binary_type = str
 else:
-    from itertools import zip_longest as izip_longest
     from functools import reduce, partial
     _none_type = type(None)
-    _int_type = int
-    _float_type = float
-    _text_type = str
     _binary_type = bytes
 
 
@@ -110,7 +107,7 @@ def _mediawiki_row_with_attrs(separator, cell_values, colwidths, colaligns):
 def _latex_line_begin_tabular(colwidths, colaligns):
     alignment = { "left": "l", "right": "r", "center": "c", "decimal": "r" }
     tabular_columns_fmt = "".join([alignment.get(a, "l") for a in colaligns])
-    return "\\begin{tabular}{" + tabular_columns_fmt + "}\n\hline"
+    return "\\begin{tabular}{" + tabular_columns_fmt + "}\n\\hline"
 
 
 _table_formats = {"simple":
@@ -189,8 +186,8 @@ _table_formats = {"simple":
 tabulate_formats = list(sorted(_table_formats.keys()))
 
 
-_invisible_codes = re.compile("\x1b\[\d*m")  # ANSI color codes
-_invisible_codes_bytes = re.compile(b"\x1b\[\d*m")  # ANSI color codes
+_invisible_codes = re.compile("\x1b\\[\\d*m")  # ANSI color codes
+_invisible_codes_bytes = re.compile(b"\x1b\\[\\d*m")  # ANSI color codes
 
 
 def simple_separated_format(separator):
@@ -209,7 +206,7 @@ def simple_separated_format(separator):
 
 def _isconvertible(conv, string):
     try:
-        n = conv(string)
+        conv(string)
         return True
     except ValueError:
         return False
@@ -489,7 +486,7 @@ def _normalize_tabular_data(tabular_data, headers):
         if hasattr(tabular_data.values, "__call__"):
             # likely a conventional dict
             keys = list(tabular_data.keys())
-            rows = list(zip_longest(*list(tabular_data.values())))  # columns have to be transposed
+            rows = list(izip_longest(*list(tabular_data.values())))  # columns have to be transposed
         elif hasattr(tabular_data, "index"):
             # values is a property, has .index => it's likely a pandas.DataFrame (pandas 0.11.0)
             keys = list(tabular_data.keys())

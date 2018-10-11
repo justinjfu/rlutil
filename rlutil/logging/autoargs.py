@@ -125,7 +125,7 @@ def get_all_parameters(cls, parsed_args):
     else:
         arg_defaults = {}
     all_params = {}
-    for arg_name, arg_info in info.items():
+    for arg_name, _ in info.items():
         prefixed_name = prefix + arg_name
         arg_value = None
         if hasattr(parsed_args, prefixed_name):

@@ -3,8 +3,8 @@ import random
 import json
 import contextlib
 
+from rlutil.logging.hyperparameterized import extract_hyperparams
 import rlutil.logging.logger as rllablogger
-from rlutil.logging.hyperparametrized import extract_hyperparams
 
 THIS_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 RLUTIL_DIR = os.path.dirname(THIS_FILE_DIR)

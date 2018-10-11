@@ -22,7 +22,7 @@ class GridEnvCyTest(unittest.TestCase):
     def test_transitions(self):
         cy_s = self.cy_env.reset()
         py_s = self.py_env.reset()
-        for t in range(10):
+        for _ in range(10):
             action = self.py_env.action_space.sample()
             cy_s, _, _, _ = self.cy_env.step(action)
             py_s, _, _, _ = self.py_env.step(action)

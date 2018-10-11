@@ -59,7 +59,7 @@ class TabularQValuePlotter(object):
         normalized_values = normalized_values - np.min(normalized_values)
         normalized_values = normalized_values/np.max(normalized_values)
 
-        cmap = cm.RdYlBu
+        cmap = cm.get_cmap('RdYlBu')
 
         for x, y in itertools.product(range(self.w), range(self.h)):
             if self.invert_y:

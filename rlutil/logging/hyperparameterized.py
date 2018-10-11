@@ -38,31 +38,3 @@ class HyperparamWrapper(object):
     def __init__(self, **hyper_kwargs):
         pass
 
-if __name__ == "__main__":
-    @six.add_metaclass(Hyperparametrized)
-    class Algo1(object):
-        def __init__(self, hyper1=1.0, hyper2=2.0, model1=None):
-            pass
-
-
-    class Algo2(Algo1):
-        def __init__(self, hyper3=5.0, **kwargs):
-            super(Algo2, self).__init__(**kwargs)
-
-
-    @six.add_metaclass(Hyperparametrized)
-    class Model1(object):
-        def __init__(self, hyper1=None):
-            pass
-
-
-    def get_params_json(**kwargs):
-        hyper_dict = extract_hyperparams(HyperparamWrapper(**kwargs))
-        del hyper_dict[CLSNAME]
-        return hyper_dict
-
-    m1 = Model1(hyper1='Test')
-    a1 = Algo2(hyper1=1.0, hyper2=5.0, hyper3=10.0, model1=m1)
-
-    print( isinstance(type(a1), Hyperparametrized))
-    print(get_params_json(a1=a1))

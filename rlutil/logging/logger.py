@@ -175,7 +175,7 @@ class TerminalTablePrinter(object):
 
     def refresh(self):
         import os
-        rows, columns = os.popen('stty size', 'r').read().split()
+        rows, _ = os.popen('stty size', 'r').read().split()
         tabulars = self.tabulars[-(int(rows) - 3):]
         sys.stdout.write("\x1b[2J\x1b[H")
         sys.stdout.write(tabulate(tabulars, self.headers))
@@ -232,6 +232,7 @@ def log_parameters(log_file, args, classes):
 
 
 class MyEncoder(json.JSONEncoder):
+    # pylint: disable=E0202
     def default(self, o):
         if isinstance(o, type):
             return {'$class': o.__module__ + "." + o.__name__}

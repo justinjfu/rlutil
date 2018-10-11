@@ -1,15 +1,8 @@
-import inspect
-import itertools
 import sys
-
 import numpy as np
 import gym
 import gym.spaces
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 
-from rlutil.logging import logger
-import rlutil.logging.log_utils as log_utils
 from rlutil.envs.gridcraft.grid_spec import *
 from rlutil.envs.gridcraft.utils import one_hot_to_flat, flat_to_one_hot
 
@@ -156,10 +149,6 @@ class GridEnv(gym.Env):
         self._timestep = 0
         return start_idx #flat_to_one_hot(start_idx, len(self.gs))
 
-    def get_tile(self, obs):
-        idx = self.obs_to_state(obs)
-        return self.gs.get_value(idx)
-
     def render(self, close=False, ostream=sys.stdout):
         if close:
             return
@@ -186,136 +175,3 @@ class GridEnv(gym.Env):
         dO = len(self.gs)
         #return gym.spaces.Box(0,1,shape=dO)
         return gym.spaces.Discrete(dO)
-
-    def log_diagnostics(self, paths):
-        Ntraj = len(paths)
-        acts = np.array([traj['actions'] for traj in paths])
-        obs = np.array([traj['observations'] for traj in paths])
-
-        state_count = np.sum(obs, axis=1)
-        states_visited = np.sum(state_count>0, axis=-1)
-        #log states visited
-        logger.record_tabular('AvgStatesVisited', np.mean(states_visited))
-
-    def plot_trajs(self, paths, dirname=None, itr=0):
-        plt.figure()
-        # draw walls
-        ax = plt.gca()
-        wall_positions = self.gs.find(WALL)
-        for i in range(wall_positions.shape[0]):
-            wall_xy = wall_positions[i,:]
-            wall_xy[1] = self.gs.height-wall_xy[1]-1
-            ax.add_patch(Rectangle(wall_xy-0.5, 1, 1))
-        #plt.scatter(wall_positions[:,0], wall_positions[:,1], color='k')
-
-        val_to_color = {
-            REWARD: (0,0.2,0.0),
-            REWARD2: (0.0, 0.5, 0.0),
-            REWARD3: (0.0, 1.0, 0.0),
-            REWARD4: (1.0, 0.0, 1.0),
-            START: 'b',
-        }
-        for key in val_to_color:
-            rew_positions = self.gs.find(key)
-            plt.scatter(rew_positions[:,0], self.gs.height-rew_positions[:,1]-1, color=val_to_color[key])
-
-        for path in paths:
-            obses = self.obs_to_state(path['observations'])
-            xys = self.gs.idx_to_xy(obses)
-            # plot x, y positions
-            plt.plot(xys[:,0], self.gs.height-xys[:,1]-1)
-
-        ax.set_xticks(np.arange(-1, self.gs.width+1, 1))
-        ax.set_yticks(np.arange(-1, self.gs.height+1, 1))
-        plt.grid()
-
-        if dirname is not None:
-            log_utils.record_fig('trajs_itr%d'%itr, subdir=dirname, rllabdir=True)
-        else:
-            plt.show()
-
-    def debug_qval(self, q_func, obses=None, acts=None, gamma=0.95):
-        # q_func: f(s, a) => double
-
-        # get all states
-        _obses = []
-        _acts = []
-        for (x, y, a) in itertools.product(range(self.gs.width), range(self.gs.height), range(5)):
-            obs = flat_to_one_hot(self.gs.xy_to_idx((x, y)), ndim=len(self.gs))
-            act = a #flat_to_one_hot(a, ndim=5)
-            _obses.append(obs)
-            _acts.append(act)
-        _obses = np.array(_obses)
-        _acts = np.array(_acts)
-
-        # eval q
-        qvals = q_func(_obses, _acts)
-
-        # true q
-        if self._true_q is None:
-            from rlutil.envs.gridcraft.true_qvalues import load_qvals
-            self._true_q = load_qvals(self.gs, self._env_args, gamma=gamma)
-        true_qvals = self._true_q._q_vec
-
-        # log errors
-        q_err = np.abs(qvals - true_qvals)
-        logger.record_tabular('QStarErrorMean', np.mean(q_err))
-        logger.record_tabular('QStarErrorMax', np.max(q_err))
-        logger.record_tabular('QStarErrorMin', np.min(q_err))
-
-        if obses is not None and acts is not None:
-            qvals = q_func(obses, acts)
-            true_qvals = self._true_q(obses, acts)
-            q_err = np.abs(qvals - true_qvals)
-            logger.record_tabular('QStarSampledErrorMean', np.mean(q_err))
-            logger.record_tabular('QStarSampeldErrorMax', np.max(q_err))
-            logger.record_tabular('QStarSampledErrorMin', np.min(q_err))
-        else:
-            logger.record_tabular('QStarSampledErrorMean', float('NaN'))
-            logger.record_tabular('QStarSampeldErrorMax', float('NaN'))
-            logger.record_tabular('QStarSampledErrorMin', float('NaN'))
-
-
-    def plot_costs(self, paths, cost_fn, dirname=None, itr=0, policy=None,
-                   use_traj_paths=False):
-        #costs = cost_fn.eval(paths)
-        if self.gs.width*self.gs.height > 600:
-            use_text = False
-        else:
-            use_text = True
-
-
-        if not use_traj_paths:
-            # iterate through states, and each action - makes sense for non-rnn costs
-            import itertools
-            obses = []
-            acts = []
-            for (x, y, a) in itertools.product(range(self.gs.width), range(self.gs.height), range(5)):
-                obs = self.state_to_obs(self.gs.xy_to_idx((x, y)))
-                act = flat_to_one_hot(a, ndim=5)
-                obses.append(obs)
-                acts.append(act)
-            path = {'observations': np.array(obses), 'actions': np.array(acts)}
-            if policy is not None:
-                if hasattr(policy, 'set_env_infos'):
-                    policy.set_env_infos(path.get('env_infos', {}))
-                actions, agent_infos = policy.get_actions(path['observations'])
-                path['agent_infos'] = agent_infos
-            paths = [path]
-
-        plots = cost_fn.debug_eval(paths, policy=policy)
-        for plot in plots:
-            plots[plot] = plots[plot].squeeze()
-
-        for plot in plots:
-            data = plots[plot]
-
-            plotter = TabularQValuePlotter(self.gs.width, self.gs.height, text_values=use_text)
-            for i, (x, y, a) in enumerate(itertools.product(range(self.gs.width), range(self.gs.height), range(5))):
-                plotter.set_value(x, self.gs.height-y-1, a, data[i])
-            plotter.make_plot()
-            if dirname is not None:
-                log_utils.record_fig('%s_itr%d'%(plot, itr), subdir=dirname, rllabdir=True)
-            else:
-                plt.show()
-
