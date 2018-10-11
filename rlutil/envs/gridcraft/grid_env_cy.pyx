@@ -45,9 +45,13 @@ cdef class GridEnv(tabular_env.TabularEnv):
                 new_y -= 1
             elif action == ACT_DOWN:
                 new_y += 1
-            new_x = min(max(new_x, 0), self.gs.height)
-            new_y = min(max(new_y, 0), self.gs.width)
-            self._transition_map.insert(pair[int, double](self.gs.xy_to_idx(pair[int, int](new_x, new_y)), 1.0))
+            new_x = min(max(new_x, 0), self.gs.width-1)
+            new_y = min(max(new_y, 0), self.gs.height-1)
+            new_xy = pair[int, int](new_x, new_y)
+            if self.gs.get_value(new_xy) == TileType.WALL:
+                self._transition_map.insert(pair[int, double](state, 1.0))
+            else:
+                self._transition_map.insert(pair[int, double](self.gs.xy_to_idx(new_xy), 1.0))
         return self._transition_map
 
     cpdef double reward(self, int state, int action, int next_state):

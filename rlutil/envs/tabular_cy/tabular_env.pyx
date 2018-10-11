@@ -110,9 +110,9 @@ cdef class TabularEnv(object):
           info: A debug info dictionary.
         """
         infos = {'state': self.get_state()}
-        next_state, reward, done = self.step_state(action)
-        nobs = self.observation(next_state)
-        return nobs, reward, done, infos
+        ts = self.step_state(action)
+        nobs = self.observation(ts.state)
+        return nobs, ts.reward, ts.done, infos
 
     @cython.infer_types(True)
     cdef TimeStep step_state(self, int action):

@@ -196,55 +196,11 @@ cpdef q_iteration_sparse(tabular_env.TabularEnv tabular_env,
     return q_values_np
 
 
-cdef get_policy(q_fn, double ent_wt=1.0):
+#@cython.cdivision(True)
+cpdef get_policy(q_fn, double ent_wt=1.0):
     """Return a policy by normalizing a Q-function."""
-    inverse_ent = 1.0/ent_wt
-    value_fn = ent_wt * lse(inverse_ent * q_fn)
+    cdef double inverse_ent = 1.0/ent_wt
+    value_fn = ent_wt * lse(inverse_ent * q_fn, axis=1)
     adv_rew = q_fn - np.expand_dims(value_fn, axis=1)
     pol_probs = np.exp(inverse_ent * adv_rew)
     return pol_probs
-
-
-def compute_visitations(tabular_env.TabularEnv tabular_env,
-                        q_fn,
-                        double ent_wt=1.0,
-                        int num_steps=100,
-                        double discount=0.99):
-    cdef int ds, da, state
-    cdef float prob
-    ds = tabular_env.num_states
-    da = tabular_env.num_actions
-
-    s_visit_np = np.zeros((ds,), dtype=np.float64)
-    cdef double[:] s_visit = s_visit_np
-
-    for (state, prob) in tabular_env.initial_state_distribution.iteritems():
-        s_visit[state] = prob
-    sa_visit_tot_np = np.zeros((ds, da), dtype=np.float64)
-    cdef double[:, :] sa_visit_tot = sa_visit_tot_np
-    sa_visit_np = np.zeros((ds, da), dtype=np.float64)
-    cdef double[:, :] sa_visit = sa_visit_np
-
-    pol_probs_np = get_policy(q_fn, ent_wt=ent_wt)  # dS x dA
-    cdef double[:, :] pol_probs = pol_probs_np
-
-    cdef double visit_sa
-    for i in range(num_steps):
-        for s in range(ds):
-            for a in range(da):
-                visit_sa = pol_probs[s, a] * s_visit[s] 
-                sa_visit_tot[s, a] += visit_sa / num_steps
-                sa_visit[s, a] = visit_sa
-
-        s_visit_np.fill(0.0)
-        for s in range(ds):
-            for a in range(da):
-                transitions = tabular_env.transitions_cy(s, a)
-                transitions_end = transitions.end()
-                transitions_it = transitions.begin()
-                while transitions_it != transitions_end:
-                    ns = dereference(transitions_it).first
-                    p = dereference(transitions_it).second
-                    s_visit[ns] += p * sa_visit[s, a]
-                    preincrement(transitions_it)
-    return sa_visit_tot_np

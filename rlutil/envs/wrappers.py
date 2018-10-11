@@ -34,7 +34,7 @@ class Wrapper(Env):
 
         self._update_wrapper_stack()
         if env and hasattr(env, '_configured') and env._configured:
-            logger.warning("Attempted to wrap env %s after .configure() was called.", env)
+            logger.warn("Attempted to wrap env %s after .configure() was called.", env)
 
     def _update_wrapper_stack(self):
         """

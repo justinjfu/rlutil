@@ -14,7 +14,8 @@ def compute_value_function(q_values, ent_wt=0.0):
     return v_fn
 
 
-def q_iteration_dense(tabular_env,
+def q_iteration_dense(transition_matrix,
+                      reward_matrix,
                       warmstart_q=None,
                       num_itrs=100,
                       ent_wt=0.0,
@@ -23,7 +24,8 @@ def q_iteration_dense(tabular_env,
     """Computes optimal q-values using dense q-iteration.
 
     Args:
-      tabular_env: A TabularEnv environment.
+      transition_matrix:  A dS x dA x dS transition matrix
+      reward_matrix: A dS x dA x dS reward matrix
       warmstart_q: A dS x dA array of initial q-values.
       num_itrs: Number of iterations to run.
       ent_wt: Entropy weight. Default 0.
@@ -33,15 +35,12 @@ def q_iteration_dense(tabular_env,
     Returns:
       A dS x dA array of Q-values
     """
-    ds = tabular_env.num_states
-    da = tabular_env.num_actions
+    ds, da, _ = transition_matrix.shape
 
     q_vals = warmstart_q
     if warmstart_q is None:
         q_vals = np.zeros((ds, da), dtype=np.float64)
 
-    transition_matrix = tabular_env.transition_matrix()
-    reward_matrix = tabular_env.reward_matrix()
     transition_rewards = np.sum(transition_matrix * reward_matrix, axis=2)
 
     for _ in range(num_itrs):
@@ -85,7 +84,7 @@ def q_iteration_sparse(tabular_env,
     if warmstart_q is None:
         q_vals = np.zeros((ds, da), dtype=np.float64)
 
-    for i in range(num_itrs):
+    for _ in range(num_itrs):
         v_fn = compute_value_function(q_vals, ent_wt)
         new_q = np.zeros((ds, da))
 
