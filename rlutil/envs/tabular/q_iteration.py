@@ -26,7 +26,7 @@ def get_policy(q_fn, ent_wt=1.0):
     return pol_probs
 
 
-def softq_iteration(env, reward_matrix=None, K=50, gamma=0.99, ent_wt=0.1, warmstart_q=None, policy=None):
+def softq_iteration(env, reward_matrix=None, K=50, discount=0.99, ent_wt=0.1, warmstart_q=None, policy=None):
     """
     Perform tabular soft Q-iteration
     """
@@ -47,12 +47,12 @@ def softq_iteration(env, reward_matrix=None, K=50, gamma=0.99, ent_wt=0.1, warms
             v_fn = logsumexp(q_fn, alpha=ent_wt)
         else:
             v_fn = np.sum((q_fn - np.log(policy))*policy, axis=1)
-        new_q = reward_matrix + gamma*t_matrix.dot(v_fn)
+        new_q = reward_matrix + discount*t_matrix.dot(v_fn)
         q_fn = new_q
     return q_fn
 
 
-def q_iteration(env, reward_matrix=None, K=50, gamma=0.99, warmstart_q=None, policy=None):
+def q_iteration(env, reward_matrix=None, K=50, discount=0.99, warmstart_q=None, policy=None):
     dim_obs = env.nstates
     dim_act = env.action_space.n
     if reward_matrix is None:
@@ -68,6 +68,6 @@ def q_iteration(env, reward_matrix=None, K=50, gamma=0.99, warmstart_q=None, pol
             v_fn = np.max(q_fn, axis=1)
         else:
             v_fn = np.sum(q_fn*policy, axis=1)
-        new_q = reward_matrix + gamma*t_matrix.dot(v_fn)
+        new_q = reward_matrix + discount*t_matrix.dot(v_fn)
         q_fn = new_q
     return q_fn

@@ -115,7 +115,7 @@ cdef class TabularEnv(object):
         return nobs, ts.reward, ts.done, infos
 
     @cython.infer_types(True)
-    cdef TimeStep step_state(self, int action):
+    cpdef TimeStep step_state(self, int action):
         """Simulates the environment by one timestep, returning the state id
         instead of the observation.
 
@@ -146,7 +146,7 @@ cdef class TabularEnv(object):
         initial_state = self.reset_state()
         return self.observation(initial_state)
 
-    cdef int reset_state(self):
+    cpdef int reset_state(self):
         """Resets the state of the environment and returns an initial state.
 
         Returns:
