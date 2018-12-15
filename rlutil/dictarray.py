@@ -39,19 +39,10 @@ def DictArray(shapes_dict, axis=0, dtype=np.float32):
 
 if __name__ == "__main__":
     TestArr = DictArray(shapes_dict={'a': (5,3), 'b': (4)}, axis=1)
+    a1 = TestArr(a=np.random.randn(5,3), b=np.ones(4))
+    a2 = TestArr(a=np.random.randn(5,3), b=np.ones(4))
 
-    rand1 = np.random.randn(5,3)
-    rand2 = np.random.randn(5,3)
-    a1 = TestArr(a=rand1, b=np.ones(4))
-    a2 = TestArr(a=rand2, b=np.ones(4))
-
-    assert np.allclose(a1['a'], rand1)
-    assert np.allclose(a2['a'], rand2)
-    assert np.allclose((a1+a2)['a'], rand1+rand2)
-
-    print(type(a1))
-    a12 = np.c_[a1, a2].T
-    print(a12)
-    print(type(a12))
-    print(a12['a'])
-
+    print(a1, type(a1))
+    print(a1['a'])
+    print(a1['b'])
+    print((a1+a2)['a'])
