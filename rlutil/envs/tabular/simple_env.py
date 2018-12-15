@@ -20,8 +20,8 @@ class DiscreteEnv(gym.Env):
                  max_timesteps=20, obs_matrix=None):
         super(DiscreteEnv, self).__init__()
         dX, dA, dXX = transition_matrix.shape
-        self.nstates = dX
-        self.nactions = dA
+        self.num_states = dX
+        self.num_actions = dA
         self.transitions = transition_matrix
         self.init_state = init_state
         self.reward = reward
@@ -31,7 +31,7 @@ class DiscreteEnv(gym.Env):
         self.obs_matrix = obs_matrix
 
         if self.obs_matrix is None:
-            self.__observation_space = Box(0, 1, shape=(self.nstates,))
+            self.__observation_space = Box(0, 1, shape=(self.num_states,))
         else:
             self.obs_matrix = np.maximum(-1.0, np.minimum(1.0, self.obs_matrix))
             self.__observation_space = Box(-1.0, 1.0, shape=(obs_matrix.shape[0],))
@@ -52,15 +52,15 @@ class DiscreteEnv(gym.Env):
         else:
             self.cur_state = self.init_state
         self.__timesteps = 0
-        obs = flat_to_one_hot(self.cur_state, ndim=self.nstates)
+        obs = flat_to_one_hot(self.cur_state, ndim=self.num_states)
         return self._wrap_obs(obs)
 
     def step(self, a):
         transition_probs = self.transitions[self.cur_state, a]
-        next_state = np.random.choice(np.arange(self.nstates), p=transition_probs)
+        next_state = np.random.choice(np.arange(self.num_states), p=transition_probs)
         r = self.reward[self.cur_state, a]
         self.cur_state = next_state
-        obs = flat_to_one_hot(self.cur_state, ndim=self.nstates)
+        obs = flat_to_one_hot(self.cur_state, ndim=self.num_states)
         self.__timesteps += 1
 
         done = False
@@ -82,7 +82,7 @@ class DiscreteEnv(gym.Env):
         state_count = np.sum(obs, axis=0)
         #state_count = np.mean(state_count, axis=0)
         state_freq = state_count/float(np.sum(state_count))
-        for state in range(self.nstates):
+        for state in range(self.num_states):
             logger.record_tabular('AvgStateFreq%d'%state, state_freq[state])
 
     def plot_data(self, data, dirname=None, itr=0, fname='trajs_itr%d'):
@@ -132,9 +132,9 @@ class DiscreteEnv(gym.Env):
             # iterate through states, and each action - makes sense for non-rnn costs
             obses = []
             acts = []
-            for (x, a) in itertools.product(range(self.nstates), range(self.nactions)):
-                obs = flat_to_one_hot(x, ndim=self.nstates)
-                act = flat_to_one_hot(a, ndim=self.nactions)
+            for (x, a) in itertools.product(range(self.num_states), range(self.num_actions)):
+                obs = flat_to_one_hot(x, ndim=self.num_states)
+                act = flat_to_one_hot(a, ndim=self.num_actions)
                 obses.append(obs)
                 acts.append(act)
             path = {'observations': np.array(obses), 'actions': np.array(acts)}
@@ -151,20 +151,18 @@ class DiscreteEnv(gym.Env):
 
         for plot in plots:
             data = plots[plot]
-            data = np.reshape(data, (self.nstates, self.nactions))
+            data = np.reshape(data, (self.num_states, self.num_actions))
             self.plot_data(data, dirname=dirname, fname=plot+'_itr%d', itr=itr)
 
-    @property
     def transition_matrix(self):
         return self.transitions
 
-    @property
-    def rew_matrix(self):
+    def reward_matrix(self):
         return self.reward
 
     @property
     def initial_state_distribution(self):
-        return flat_to_one_hot(self.init_state, ndim=self.nstates)
+        return flat_to_one_hot(self.init_state, ndim=self.num_states)
 
     @property
     def action_space(self):

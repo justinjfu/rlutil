@@ -1,10 +1,10 @@
 import six
 import unittest
 
-from rlutil.logging.hyperparameterized import Hyperparametrized, extract_hyperparams, CLSNAME, HyperparamWrapper
+from rlutil.logging.hyperparameterized import Hyperparameterized, extract_hyperparams, CLSNAME, HyperparamWrapper
 
 
-@six.add_metaclass(Hyperparametrized)
+@six.add_metaclass(Hyperparameterized)
 class Algo1(object):
     def __init__(self, hyper1=1.0, hyper2=2.0, model1=None):
         pass
@@ -15,7 +15,7 @@ class Algo2(Algo1):
         super(Algo2, self).__init__(**kwargs)
 
 
-@six.add_metaclass(Hyperparametrized)
+@six.add_metaclass(Hyperparameterized)
 class Model1(object):
     def __init__(self, hyper1=None):
         pass
@@ -30,7 +30,7 @@ class HyperparameterizedTest(unittest.TestCase):
         m1 = Model1(hyper1='Test')
         a1 = Algo2(hyper1=1.0, hyper2=5.0, hyper3=10.0, model1=m1)
 
-        self.assertIsInstance(type(a1), Hyperparametrized)
+        self.assertIsInstance(type(a1), Hyperparameterized)
         params = get_params_json(a1=a1)['a1']
         expected_params = {'__clsname__': 'Algo2', 
                             'hyper1': 1.0, 

@@ -5,7 +5,7 @@ Usage: q_iteration(env, gamma=discount factor, ent_wt= entropy bonus)
 """
 import numpy as np
 from scipy.misc import logsumexp as sp_lse
-from rllab.misc import logger
+from rlutil.logging import logger
 
 def softmax(q, alpha=1.0):
     q = (1.0/alpha)*q
@@ -30,16 +30,18 @@ def softq_iteration(env, reward_matrix=None, K=50, gamma=0.99, ent_wt=0.1, warms
     """
     Perform tabular soft Q-iteration
     """
-    dim_obs = env.nstates
-    dim_act = env.action_space.n
+    dim_obs = env.num_states
+    dim_act = env.num_actions
     if reward_matrix is None:
-        reward_matrix = env.rew_matrix
+        reward_matrix = env.reward_matrix()
+    reward_matrix = reward_matrix[:,:,0]
+
     if warmstart_q is None:
         q_fn = np.zeros((dim_obs, dim_act))
     else:
         q_fn = warmstart_q
 
-    t_matrix = env.transition_matrix
+    t_matrix = env.transition_matrix()
     for k in range(K):
         if policy is None:
             v_fn = logsumexp(q_fn, alpha=ent_wt)

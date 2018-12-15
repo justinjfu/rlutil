@@ -13,7 +13,7 @@ _int_type = int
 _float_type = float
 _text_type = str
 _none_type = type(None)
-from six.moves import izip_longest
+from six.moves import zip_longest
 if python_version_tuple()[0] < "3":
     from functools import partial
     _binary_type = str
