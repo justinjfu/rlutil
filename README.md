@@ -5,6 +5,7 @@ A collection of common code for RL projects.
 Install dependencies
 ```
 pip install -r requirements.txt
+sudo apt-get install python-dev
 ```
 
 Compile Cython environments (this must be run from the repo root directory)
