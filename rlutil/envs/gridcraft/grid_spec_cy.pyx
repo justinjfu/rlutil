@@ -76,6 +76,7 @@ cpdef GridSpec local_spec(str map, xpnt):
 cdef class GridSpec(object):
     def __init__(self, int w, int h):
         self.__data_np = np.zeros((w, h), dtype=np.int32)
+        self.__data_np[:,:] = TileType.EMPTY
         self.__data = self.__data_np
         self.width = w
         self.height = h

@@ -8,7 +8,7 @@ _HYPERNAME_ = '__hyper_clsname__'
 def extract_hyperparams(obj):
     if any([isinstance(obj, type_) for type_ in (int, float, str)]):
         return obj
-    elif isinstance(type(obj), Hyperparametrized):
+    elif isinstance(type(obj), Hyperparameterized):
         hypers = getattr(obj, _HYPER_)
         hypers[CLSNAME] = getattr(obj, _HYPERNAME_)
         for attr in hypers:
@@ -16,7 +16,7 @@ def extract_hyperparams(obj):
         return hypers
     return type(obj).__name__
 
-class Hyperparametrized(type):
+class Hyperparameterized(type):
     def __new__(self, clsname, bases, clsdict):
         old_init = clsdict.get('__init__', bases[0].__init__)
         def init_wrapper(inst, *args, **kwargs):
@@ -29,11 +29,11 @@ class Hyperparametrized(type):
             return old_init(inst, *args, **kwargs)
         clsdict['__init__'] = init_wrapper
 
-        cls = super(Hyperparametrized, self).__new__(self, clsname, bases, clsdict)
+        cls = super(Hyperparameterized, self).__new__(self, clsname, bases, clsdict)
         return cls
 
 
-@six.add_metaclass(Hyperparametrized)
+@six.add_metaclass(Hyperparameterized)
 class HyperparamWrapper(object):
     def __init__(self, **hyper_kwargs):
         pass

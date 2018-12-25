@@ -6,7 +6,7 @@ from gym.envs.registration import register
 
 _REGISTERED = False
 def register_envs():
-    from rlutil.envs.gridcraft.mazes import *
+    from rlutil.envs.gridcraft.mazes import MAZE1, MAZE_LAVA
     from rlutil.envs.gridcraft.grid_spec import REWARD, LAVA
     from rlutil.envs.env_utils import CustomGymEnv
     from rlutil.envs.tabular.simple_env import random_env_register

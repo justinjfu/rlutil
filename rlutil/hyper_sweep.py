@@ -29,17 +29,19 @@ class Sweeper(object):
         for _ in range(self.repeat):
             for config in itertools.product(*[val for val in self.hyper_config.values()]):
                 kwargs = {key:config[i] for i, key in enumerate(self.hyper_config.keys())}
-                timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                kwargs['exp_name'] = "%s_%d" % (timestamp, count)
                 count += 1
                 yield kwargs
 
 
+def always_true(x):
+    return True
 
-def run_sweep_serial(run_method, params, repeat=1):
+
+def run_sweep_serial(run_method, params, repeat=1, filter_fn=always_true):
     sweeper = Sweeper(params, repeat)
     for config in sweeper:
-        run_method(**config)
+        if filter_fn(config):
+            run_method(**config)
 
 
 def kwargs_wrapper(args_method):
@@ -47,12 +49,14 @@ def kwargs_wrapper(args_method):
     return method(**args)
 
 
-def run_sweep_parallel(run_method, params, repeat=1, num_cpu=multiprocessing.cpu_count()):
+def run_sweep_parallel(run_method, params, repeat=1, num_cpu=multiprocessing.cpu_count(), 
+    filter_fn=always_true):
     sweeper = Sweeper(params, repeat)
     pool = multiprocessing.Pool(num_cpu)
     exp_args = []
     for config in sweeper:
-        exp_args.append((config, run_method))
+        if filter_fn(config):
+            exp_args.append((config, run_method))
     random.shuffle(exp_args)
     pool.map(kwargs_wrapper, exp_args)
 

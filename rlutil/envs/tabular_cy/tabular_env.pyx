@@ -9,6 +9,7 @@ import gym.spaces
 import numpy as np
 import cython
 from rlutil.envs.tabular_cy.tabular_env cimport TimeStep
+from rlutil.math_utils import np_seed
 
 from libc.math cimport fmin
 from libcpp.map cimport map, pair
@@ -115,7 +116,7 @@ cdef class TabularEnv(object):
         return nobs, ts.reward, ts.done, infos
 
     @cython.infer_types(True)
-    cdef TimeStep step_state(self, int action):
+    cpdef TimeStep step_state(self, int action):
         """Simulates the environment by one timestep, returning the state id
         instead of the observation.
 
@@ -146,7 +147,7 @@ cdef class TabularEnv(object):
         initial_state = self.reset_state()
         return self.observation(initial_state)
 
-    cdef int reset_state(self):
+    cpdef int reset_state(self):
         """Resets the state of the environment and returns an initial state.
 
         Returns:
@@ -249,3 +250,39 @@ cdef class LinkedListEnv(TabularEnv):
             return 1.0
         else:
             return 0.0
+
+
+cdef class RandomTabularEnv(TabularEnv):
+    def __init__(self, int num_states=3, int num_actions=2, double t_sparsity=0.75, int seed=0,
+                double reward_scale=1.0, bint self_loop=1):
+        super(RandomTabularEnv, self).__init__(num_states, num_actions, {0: 1.0})
+
+        with np_seed(seed):
+            transition_matrix = np.random.rand(num_states, num_actions, num_states).astype(np.float64)
+            transition_matrix = np.exp(transition_matrix)
+
+            for s in range(num_states):
+                for a in range(num_actions):
+                    zero_idxs = np.random.randint(0, num_states, size=int(num_states*t_sparsity))
+                    transition_matrix[s, a, zero_idxs] = 0.0
+                if self_loop:
+                    transition_matrix[s, 0, s] = 1000.0
+            transition_matrix = transition_matrix/np.sum(transition_matrix, axis=2, keepdims=True)
+            self._transition_matrix = transition_matrix
+            rewards = np.random.randn(num_states, num_actions) * reward_scale
+            zero_idxs = np.random.randint(0, num_states, size=int(num_states*t_sparsity))
+            rewards[zero_idxs] = 0.0
+            self._reward_matrix = rewards
+
+    cdef map[int, double] transitions_cy(self, int state, int action):
+        self._transition_map.clear()
+        cdef int ns
+        cdef double prob
+        for ns in range(self.num_states):
+            prob = self._transition_matrix[state, action, ns]
+            if prob > 0:
+                self._transition_map.insert(pair[int, double](ns, prob))
+        return self._transition_map
+
+    cpdef double reward(self, int state, int action, int next_state):
+        return self._reward_matrix[state, action]
