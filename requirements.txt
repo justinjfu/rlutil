@@ -1,3 +1,5 @@
 cython
 parameterized
 gym
+path.py
+plotly
