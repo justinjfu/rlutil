@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import scipy as sp
 import scipy.stats
@@ -120,7 +121,10 @@ def np_seed(seed):
         yield
     else:
         old_state = np.random.get_state()
+        old_py_state = random.getstate()
         np.random.seed(seed)
+        random.seed(seed)
         yield
         np.random.set_state(old_state)
+        random.setstate(old_py_state)
 

@@ -20,6 +20,7 @@ def generate_exp_name(exp_prefix='exp', exp_id='exp', log_base_dir=LOG_BASE_DIR)
 
 @contextlib.contextmanager
 def setup_logger(algo=None, dirname=None, exp_prefix='exp'):
+    reset_logger()
     exp_uuid = str(uuid.uuid4())
     if dirname is None:
         dirname = generate_exp_name(exp_prefix=exp_prefix, exp_id=exp_uuid)
@@ -56,3 +57,6 @@ def record_tabular_moving(key, value, n=100):
     vals = vals[-n:]
     KEY_TO_VALUES[key] = vals
     rllablogger.record_tabular(key+'_%d_step_mean' % n, np.mean(vals))
+
+def reset_logger():
+    KEY_TO_VALUES.clear()
