@@ -2,7 +2,7 @@
 """Base class for cython-based tabular envs.
 
 Subclasses should implement the transitions_cy,  reward methods.
-An example environment is provided in LinkedListEnv
+An example environment is provided in CliffwalkEnv
 """
 import gym
 import gym.spaces
@@ -135,7 +135,7 @@ cdef class TabularEnv(object):
         #    list(transitions.keys()), p=list(transitions.values()))
         next_state = sample_int(transitions)
         reward = self.reward(self.get_state(), action, next_state)
-        self._state = next_state
+        self.set_state(next_state)
         return TimeStep(next_state, reward, False)
 
     cpdef reset(self):
@@ -156,7 +156,7 @@ cdef class TabularEnv(object):
         initial_states = list(self.initial_state_distribution.keys())
         initial_probs = list(self.initial_state_distribution.values())
         initial_state = np.random.choice(initial_states, p=initial_probs)
-        self._state = initial_state
+        self.set_state(initial_state)
         return initial_state
 
     @cython.boundscheck(False)
@@ -211,18 +211,18 @@ cdef class TabularEnv(object):
     cpdef int get_state(self):
         """Return the agent's internal state."""
         return self._state
-    
+
     cpdef render(self):
         """Render the current state of the environment."""
-        pass
+        print(self.get_state())     
 
 
-cdef class LinkedListEnv(TabularEnv):
+cdef class CliffwalkEnv(TabularEnv):
     """An example env where an agent can move along a sequence of states. There is
     a chance that the agent may jump back to the initial state.
 
     Action 0 moves the agent back to start, and action 1 to the next state.
-    The agent only receives reward in the final state.
+    The agent only receives reward in the final state and is forced to move back to the start.
 
     Args:
       num_states: Number of states 
@@ -231,7 +231,7 @@ cdef class LinkedListEnv(TabularEnv):
     """
 
     def __init__(self, int num_states=3, double transition_noise=0.0):
-        super(LinkedListEnv, self).__init__(num_states, 2, {0: 1.0})
+        super(CliffwalkEnv, self).__init__(num_states, 2, {0: 1.0})
         self.transition_noise = transition_noise
 
     cdef map[int, double] transitions_cy(self, int state, int action):
@@ -239,14 +239,16 @@ cdef class LinkedListEnv(TabularEnv):
         if action == 0:
             self._transition_map.insert(pair[int, double](0, 1.0))
         else:
-            self._transition_map.insert(
-                pair[int, double](0, self.transition_noise))
-            self._transition_map.insert(pair[int, double](
-                    int(fmin(state + 1, self.num_states - 1)), 1.0 - self.transition_noise))
+            if state == self.num_states-1:
+                self._transition_map.insert(pair[int, double](0, 1.0))
+            else:
+                self._transition_map.insert(
+                    pair[int, double](0, self.transition_noise))
+                self._transition_map.insert(pair[int, double](state + 1, 1.0 - self.transition_noise))
         return self._transition_map
 
     cpdef double reward(self, int state, int action, int next_state):
-        if state == self.num_states - 1:
+        if state == self.num_states - 1 and action == 1:
             return 1.0
         else:
             return 0.0

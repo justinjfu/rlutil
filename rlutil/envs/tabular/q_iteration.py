@@ -83,3 +83,24 @@ def compute_visitation(env, q_fn, ent_wt=1.0, env_time_limit=50, discount=1.0):
     new_state_visitation = np.einsum('ij,ijk->k', sa_visit, t_matrix)
     state_visitation = np.expand_dims(new_state_visitation, axis=1)
   return np.sum(sa_visit_t, axis=2) / float(env_time_limit)
+
+
+def compute_occupancy(env, q_fn, ent_wt=1.0, env_time_limit=50, discount=1.0):
+  pol_probs = get_policy(q_fn, ent_wt=ent_wt)
+
+  dim_obs = env.num_states
+  dim_act = env.num_actions
+  state_visitation = np.zeros((dim_obs, 1))
+  for (state, prob) in env.initial_state_distribution.items():
+    state_visitation[state] = prob
+  t_matrix = env.transition_matrix()  # S x A x S
+  sa_visit_t = np.zeros((dim_obs, dim_act, env_time_limit))
+
+  for i in range(env_time_limit):
+    sa_visit = state_visitation * pol_probs
+    sa_visit_t[:, :, i] = (discount ** i) * sa_visit
+    # sa_visit_t[:, :, i] = sa_visit
+    # sum-out (SA)S
+    new_state_visitation = np.einsum('ij,ijk->k', sa_visit, t_matrix)
+    state_visitation = np.expand_dims(new_state_visitation, axis=1)
+  return np.sum(sa_visit_t, axis=2) #/ float(env_time_limit)

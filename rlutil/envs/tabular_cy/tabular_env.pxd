@@ -29,7 +29,7 @@ cdef class TabularEnv(object):
     cpdef int get_state(self)
     cpdef render(self)
 
-cdef class LinkedListEnv(TabularEnv):
+cdef class CliffwalkEnv(TabularEnv):
     cdef double transition_noise
 
 cdef class RandomTabularEnv(TabularEnv):
