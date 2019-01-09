@@ -318,6 +318,7 @@ cdef class InvertedPendulum(TabularEnv):
         cdef int initial_state = self.to_state_id(PendulumState(-pi/4, 0))
         super(InvertedPendulum, self).__init__(state_discretization*state_discretization, action_discretization, 
             {initial_state: 1.0})
+        self.observation_space = gym.spaces.Box(low=np.array([0,0,-self.max_vel]), high=np.array([1,1,self.max_vel]), dtype=np.float32)
 
     cdef map[int, double] transitions_cy(self, int state, int action):
         self._transition_map.clear()
@@ -347,14 +348,13 @@ cdef class InvertedPendulum(TabularEnv):
         cdef double torque = self.action_to_torque(action)
         pstate = self.from_state_id(state)
         # OpenAI gym reward
-        #cost = pstate.theta ** 2 + 0.1*pstate.thetav #+ 0.001 * (torque**2)
         cost = pstate.theta ** 2 + 0.1 * (pstate.thetav**2)+ 0.001 * (torque**2)
         max_cost = pi ** 2 + 0.1*self.max_vel**2 + 0.001 * (self.max_torque**2)
         return (-cost + max_cost) / max_cost
     
     cpdef observation(self, int state):
         pstate = self.from_state_id(state)
-        return np.array([cos(pstate.theta), sin(pstate.theta), pstate.thetav])
+        return np.array([cos(pstate.theta), sin(pstate.theta), pstate.thetav], dtype=np.float32)
 
     cdef PendulumState from_state_id(self, int state):
         cdef int th_idx = state % self._state_disc

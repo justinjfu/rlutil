@@ -38,6 +38,15 @@ def setup_logger(algo=None, dirname=None, exp_prefix='exp'):
     rllablogger.remove_tabular_output(os.path.join(dirname, 'progress.csv'))
 
 
+import traceback 
+
+def save_exception():
+    exc_file = os.path.join(rllablogger.get_snapshot_dir(), 'exception.txt')
+    with open(exc_file, 'w') as f:
+        traceback.print_exc(file=f)
+
+
+
 MEAN = 'mean'
 MAX = 'max'
 MIN = 'min'
