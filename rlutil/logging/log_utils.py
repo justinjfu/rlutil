@@ -6,6 +6,7 @@ import contextlib
 import uuid
 import numpy as np
 import collections
+import time
 
 from rlutil.logging.hyperparameterized import extract_hyperparams
 import rlutil.logging.logger as rllablogger
@@ -17,6 +18,7 @@ LOG_BASE_DIR = os.path.expanduser('~/tmp/rlutil_log')
 
 def generate_exp_name(exp_prefix='exp', exp_id='exp', log_base_dir=LOG_BASE_DIR):
     return '%s/%s/%s' % (log_base_dir, exp_prefix, exp_id)
+
 
 @contextlib.contextmanager
 def setup_logger(algo=None, dirname=None, exp_prefix='exp'):
@@ -60,3 +62,11 @@ def record_tabular_moving(key, value, n=100):
 
 def reset_logger():
     KEY_TO_VALUES.clear()
+
+@contextlib.contextmanager
+def timer(name):
+    rllablogger.log('TIMER BEGIN | %s' % name)
+    start = time.time()
+    yield
+    total = time.time()-start
+    rllablogger.log('TIMER  END  | %s | %fs' % (name, total))

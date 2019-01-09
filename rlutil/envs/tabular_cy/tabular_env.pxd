@@ -35,3 +35,23 @@ cdef class CliffwalkEnv(TabularEnv):
 cdef class RandomTabularEnv(TabularEnv):
     cdef double[:,:,:] _transition_matrix
     cdef double[:,:] _reward_matrix
+
+cdef struct PendulumState:
+    double theta
+    double thetav
+
+cdef class InvertedPendulum(TabularEnv):
+    cdef int _state_disc
+    cdef int _action_disc
+    cdef double max_vel
+    cdef double max_torque
+    cdef double[:] action_map
+    cdef double[:] state_map
+    cdef double[:] vel_map
+    cdef double _state_min
+    cdef double _state_step
+    cdef double _vel_min
+    cdef double _vel_step
+    cdef PendulumState from_state_id(self, int state)
+    cdef int to_state_id(self, PendulumState pend_state)
+    cdef double action_to_torque(self, int action)

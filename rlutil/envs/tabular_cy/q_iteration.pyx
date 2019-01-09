@@ -124,7 +124,7 @@ cpdef q_iteration_sparse_python(tabular_env,
 
 
 @cython.boundscheck(False)
-cpdef q_iteration_sparse(tabular_env.TabularEnv tabular_env,
+cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
                          reward_fn=None,
                          warmstart_q=None,
                          int num_itrs=100,
@@ -158,6 +158,7 @@ cpdef q_iteration_sparse(tabular_env.TabularEnv tabular_env,
     new_q_values_np = np.zeros((ds, da), dtype=np.float64)
     cdef double[:, :] new_q_values = new_q_values_np
 
+    """
     r_sa_np = np.zeros((ds, da), dtype=np.float64)
     cdef double[:, :] r_sa = r_sa_np
     cdef double rew
@@ -168,6 +169,7 @@ cpdef q_iteration_sparse(tabular_env.TabularEnv tabular_env,
             else:
                 rew = reward_fn(s, a, 0)
             r_sa[s, a] = rew
+    """
 
     v_fn_np = np.zeros((ds), dtype=np.float64)
     cdef double[:] v_fn = v_fn_np
@@ -182,7 +184,8 @@ cpdef q_iteration_sparse(tabular_env.TabularEnv tabular_env,
                 transitions = tabular_env.transitions_cy(s, a)
                 transitions_end = transitions.end()
                 transitions_it = transitions.begin()
-                reward = r_sa[s, a]
+                #reward = r_sa[s, a]
+                reward = tabular_env.reward(s, a, 0)
                 while transitions_it != transitions_end:
                     ns = dereference(transitions_it).first
                     p = dereference(transitions_it).second

@@ -34,7 +34,7 @@ def get_policy(q_fn, ent_wt=1.0):
     return pol_probs
 
 
-def softq_iteration(env, reward_matrix=None, K=50, discount=0.99, ent_wt=0.1, warmstart_q=None, policy=None):
+def softq_iteration(env, reward_matrix=None, num_itrs=50, discount=0.99, ent_wt=0.1, warmstart_q=None, policy=None):
     """
     Perform tabular soft Q-iteration
     """
@@ -50,7 +50,7 @@ def softq_iteration(env, reward_matrix=None, K=50, discount=0.99, ent_wt=0.1, wa
         q_fn = warmstart_q
 
     t_matrix = env.transition_matrix()
-    for k in range(K):
+    for k in range(num_itrs):
         if policy is None:
             v_fn = logsumexp(q_fn, alpha=ent_wt)
         else:

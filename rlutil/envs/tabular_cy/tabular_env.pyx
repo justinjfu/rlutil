@@ -8,10 +8,10 @@ import gym
 import gym.spaces
 import numpy as np
 import cython
-from rlutil.envs.tabular_cy.tabular_env cimport TimeStep
+from rlutil.envs.tabular_cy.tabular_env cimport TimeStep, PendulumState
 from rlutil.math_utils import np_seed
 
-from libc.math cimport fmin
+from libc.math cimport fmin, fmax, sin, cos, pi, floor
 from libcpp.map cimport map, pair
 from libc.stdlib cimport rand
 cdef extern from "limits.h":
@@ -288,3 +288,94 @@ cdef class RandomTabularEnv(TabularEnv):
 
     cpdef double reward(self, int state, int action, int next_state):
         return self._reward_matrix[state, action]
+
+
+cdef class InvertedPendulum(TabularEnv):
+    """ 
+
+    Dynamics and reward are based on OpenAI gym's implementation of Pendulum-v0
+
+    Args:
+      num_states: Number of states 
+      transition_noise: A float in [0, 1] representing the chance that the
+        agent will be transported to the start state.
+    """
+
+    def __init__(self, int state_discretization=64, int action_discretization=5):
+        self._state_disc = state_discretization
+        self._action_disc = action_discretization
+        self.max_vel = 4.
+        self.max_torque = 3.
+
+        self.action_map = np.linspace(-self.max_torque, self.max_torque, num=action_discretization)
+        self.state_map = np.linspace(-pi, pi, num=state_discretization)
+        self._state_min = -pi 
+        self._state_step = (2*pi) / state_discretization
+        self.vel_map = np.linspace(-self.max_vel, self.max_vel, num=state_discretization)
+        self._vel_min = -self.max_vel
+        self._vel_step = (2*self.max_vel)/state_discretization
+
+        cdef int initial_state = self.to_state_id(PendulumState(-pi/4, 0))
+        super(InvertedPendulum, self).__init__(state_discretization*state_discretization, action_discretization, 
+            {initial_state: 1.0})
+
+    cdef map[int, double] transitions_cy(self, int state, int action):
+        self._transition_map.clear()
+
+        # pendulum dynamics
+        cdef double g = 10.
+        cdef double m = 1.
+        cdef double l = 1.
+        cdef double dt = 0.05
+        cdef double torque = self.action_to_torque(action)
+        pstate = self.from_state_id(state)
+
+        newvel = pstate.thetav + (-3*g/(2*l) * sin(pstate.theta + pi) + 3./(m*l**2)*torque) * dt
+        newth = pstate.theta + newvel*dt
+        newvel = fmax(fmin(newvel, self.max_vel-1e-8), -self.max_vel)
+        if newth < -pi:
+            newth += 2*pi
+        if newth >= pi:
+            newth -= 2*pi
+        next_state = self.to_state_id(PendulumState(newth, newvel))
+        #check_pend = self.from_state_id(next_state)
+
+        self._transition_map.insert(pair[int, double](next_state, 1.0))
+        return self._transition_map
+
+    cpdef double reward(self, int state, int action, int next_state):
+        cdef double torque = self.action_to_torque(action)
+        pstate = self.from_state_id(state)
+        # OpenAI gym reward
+        #cost = pstate.theta ** 2 + 0.1*pstate.thetav #+ 0.001 * (torque**2)
+        cost = pstate.theta ** 2 + 0.1 * (pstate.thetav**2)+ 0.001 * (torque**2)
+        max_cost = pi ** 2 + 0.1*self.max_vel**2 + 0.001 * (self.max_torque**2)
+        return (-cost + max_cost) / max_cost
+    
+    cpdef observation(self, int state):
+        pstate = self.from_state_id(state)
+        return np.array([cos(pstate.theta), sin(pstate.theta), pstate.thetav])
+
+    cdef PendulumState from_state_id(self, int state):
+        cdef int th_idx = state % self._state_disc
+        cdef int vel_idx = state // self._state_disc
+        th = self._state_min + self._state_step * th_idx #self.state_map[th_idx]
+        thv = self._vel_min + self._vel_step * vel_idx #self.vel_map[vel_idx]
+        return PendulumState(th, thv)
+
+    cdef int to_state_id(self, PendulumState pend_state):
+        th = pend_state.theta
+        thv = pend_state.thetav
+        # round
+        cdef int th_round = int(floor((th-self._state_min)/self._state_step))
+        cdef int th_vel = int(floor((thv-self._vel_min)/self._vel_step))
+        return th_round + self._state_disc * th_vel
+
+    cdef double action_to_torque(self, int action):
+        return self.action_map[action]
+
+    cpdef render(self):
+        pend_state = self.from_state_id(self.get_state())
+        th = pend_state.theta
+        thv = pend_state.thetav
+        print('(%f, %f) = %d' % (th, thv, self.get_state()))
