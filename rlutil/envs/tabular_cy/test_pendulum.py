@@ -9,7 +9,7 @@ from rlutil.envs.tabular_cy import q_iteration_py
 class QIterationTest(unittest.TestCase):
     def setUp(self):
         self.env = tabular_env.InvertedPendulum(state_discretization=512)
-        self.env_small = tabular_env.InvertedPendulum(state_discretization=128, action_discretization=5)
+        self.env_small = tabular_env.InvertedPendulum(state_discretization=32, action_discretization=5)
 
     def test_random_rollout(self):
         self.env.reset()

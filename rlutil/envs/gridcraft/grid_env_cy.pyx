@@ -32,7 +32,7 @@ cdef class GridEnv(tabular_env.TabularEnv):
         self._transition_map.clear()
         xy = self.gs.idx_to_xy(state)
         tile_type = self.gs.get_value(xy)
-        if tile_type == TileType.LAVA: # Lava gets you stuck
+        if tile_type == TileType.LAVA or tile_type == TileType.WALL: # Lava gets you stuck
             self._transition_map.insert(pair[int, double](state, 1.0))
         else:
             new_x = xy.first
