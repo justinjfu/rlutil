@@ -11,12 +11,18 @@ from rlutil.envs.gridcraft.utils import one_hot_to_flat, flat_to_one_hot
 from rlutil.envs.tabular_cy cimport tabular_env
 
 from libcpp.map cimport map, pair
+from libc.math cimport abs, fmax
 
 cdef int ACT_NOOP = 0
 cdef int ACT_UP = 1
 cdef int ACT_DOWN = 2
 cdef int ACT_LEFT = 3
 cdef int ACT_RIGHT = 4
+NOOP = 0
+UP = 1
+DOWN = 2
+LEFT = 3
+RIGHT = 4
 
 cdef class GridEnv(tabular_env.TabularEnv):
     def __init__(self, 
@@ -77,3 +83,27 @@ cdef class GridEnv(tabular_env.TabularEnv):
                     ostream.write(RENDER_DICT[val])
             ostream.write('|\n')
         ostream.write('-' * (self.gs.width + 2)+'\n')
+
+
+cdef class DistanceRewardGridEnv(GridEnv):
+    """ 
+    A dense reward gridworld where rewards distances to a goal.
+    """
+    def __init__(self, 
+                 GridSpec gridspec, int reward_x, int reward_y, int start_x, int start_y):
+        super(DistanceRewardGridEnv, self).__init__(gridspec)
+        self.rew_x = reward_x
+        self.rew_y = reward_y
+        #self.start_x = reward_x
+        #self.start_y = reward_y
+        self.start_dist = (abs(start_x - self.rew_x) + abs(start_y - self.rew_y))
+
+    cpdef double reward(self, int state, int action, int next_state):
+        cdef pair[int, int] xy_current
+        xy_current = self.gs.idx_to_xy(state)
+
+        # distance to goal
+        cdef double dist_goal = (abs(self.rew_x - xy_current.first) + abs(self.rew_y - xy_current.second))
+
+        # normalize distance, clip from below to 0.0
+        return fmax(0.0, (- dist_goal/self.start_dist) + 1.0)

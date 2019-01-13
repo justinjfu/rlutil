@@ -17,6 +17,7 @@ import os
 import itertools
 import multiprocessing
 import random
+import hashlib
 from datetime import datetime
 
 class Sweeper(object):
@@ -35,6 +36,14 @@ class Sweeper(object):
 
 def always_true(x):
     return True
+
+
+def chunk_filter(chunk_id, num_chunks):
+    def filter(config):
+        hash_ = int(hashlib.md5(repr(config).encode('utf-8')).hexdigest(), 16)
+        task_chunk = hash_ % num_chunks
+        return chunk_id == task_chunk
+    return filter
 
 
 def run_sweep_serial(run_method, params, repeat=1, filter_fn=always_true):

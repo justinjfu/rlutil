@@ -21,11 +21,11 @@ def generate_exp_name(exp_prefix='exp', exp_id='exp', log_base_dir=LOG_BASE_DIR)
 
 
 @contextlib.contextmanager
-def setup_logger(algo=None, dirname=None, exp_prefix='exp'):
+def setup_logger(algo=None, dirname=None, exp_prefix='exp', log_base_dir=LOG_BASE_DIR):
     reset_logger()
     exp_uuid = str(uuid.uuid4())
     if dirname is None:
-        dirname = generate_exp_name(exp_prefix=exp_prefix, exp_id=exp_uuid)
+        dirname = generate_exp_name(exp_prefix=exp_prefix, exp_id=exp_uuid, log_base_dir=log_base_dir)
     rllablogger.set_snapshot_dir(dirname)
     dirname = rllablogger.get_snapshot_dir()
     rllablogger.add_tabular_output(os.path.join(dirname, 'progress.csv'))
@@ -44,6 +44,7 @@ def save_exception():
     exc_file = os.path.join(rllablogger.get_snapshot_dir(), 'exception.txt')
     with open(exc_file, 'w') as f:
         traceback.print_exc(file=f)
+    traceback.print_exc()
 
 
 
@@ -62,8 +63,10 @@ def record_tabular_stats(key, array, stats=(MEAN, MAX, MIN)):
 
 KEY_TO_VALUES = collections.defaultdict(list)
 
-def record_tabular_moving(key, value, n=100):
+def record_tabular_moving(key, value, n=100, fill_value=0.0):
     vals = KEY_TO_VALUES[key]
+    if len(vals) == 0:
+        vals.extend([fill_value]*n)
     vals.append(value)
     vals = vals[-n:]
     KEY_TO_VALUES[key] = vals
@@ -72,10 +75,26 @@ def record_tabular_moving(key, value, n=100):
 def reset_logger():
     KEY_TO_VALUES.clear()
 
+
+class SubTimer(object):
+    def __init__(self):
+        self._times = collections.defaultdict(float)
+    
+    @contextlib.contextmanager
+    def subtimer(self, name):
+        start = time.time()
+        yield
+        total = time.time()-start
+        self._times[name] += total
+
 @contextlib.contextmanager
 def timer(name):
     rllablogger.log('TIMER BEGIN | %s' % name)
     start = time.time()
-    yield
+    subtimer = SubTimer()
+    yield subtimer
     total = time.time()-start
     rllablogger.log('TIMER  END  | %s | %fs' % (name, total))
+    for val in subtimer._times:
+        rllablogger.log('\t SUBTIME | %s | %fs' % (val, subtimer._times[val]))
+

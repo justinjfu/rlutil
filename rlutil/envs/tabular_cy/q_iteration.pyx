@@ -125,7 +125,6 @@ cpdef q_iteration_sparse_python(tabular_env,
 
 @cython.boundscheck(False)
 cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
-                         reward_fn=None,
                          warmstart_q=None,
                          int num_itrs=100,
                          double ent_wt=0.0,
@@ -135,7 +134,6 @@ cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
 
     Args:
       tabular_env: A cython TabularEnv environment.
-      reward_fn: A scalar-valued reward function f(s, a, ns) -> reward
       warmstart_q: A dS x dA array of initial q-values.
       num_itrs: Number of iterations to run.
       ent_wt: Entropy weight. Default 0.
@@ -158,22 +156,8 @@ cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
     new_q_values_np = np.zeros((ds, da), dtype=np.float64)
     cdef double[:, :] new_q_values = new_q_values_np
 
-    """
-    r_sa_np = np.zeros((ds, da), dtype=np.float64)
-    cdef double[:, :] r_sa = r_sa_np
-    cdef double rew
-    for s in range(ds):
-        for a in range(da):
-            if reward_fn is None:
-                rew = tabular_env.reward(s, a, 0)
-            else:
-                rew = reward_fn(s, a, 0)
-            r_sa[s, a] = rew
-    """
-
     v_fn_np = np.zeros((ds), dtype=np.float64)
     cdef double[:] v_fn = v_fn_np
-
 
     for i in range(num_itrs):
         compute_value_function(q_values, v_fn, ds, da, ent_wt)
@@ -184,12 +168,74 @@ cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
                 transitions = tabular_env.transitions_cy(s, a)
                 transitions_end = transitions.end()
                 transitions_it = transitions.begin()
-                #reward = r_sa[s, a]
                 reward = tabular_env.reward(s, a, 0)
                 while transitions_it != transitions_end:
                     ns = dereference(transitions_it).first
                     p = dereference(transitions_it).second
                     new_q_values[s, a] += p * (reward + discount * v_fn[ns])
+                    preincrement(transitions_it)
+        if atol > 0:
+            diff = max_abs_error(new_q_values, q_values, ds, da)
+            if diff < atol:
+                break
+        q_values[:, :] = new_q_values[:, :]
+    return q_values_np
+
+
+@cython.boundscheck(False)
+cpdef softq_iteration_custom_reward(tabular_env.TabularEnv tabular_env,
+                         reward,
+                         warmstart_q=None,
+                         int num_itrs=100,
+                         double ent_wt=0.0,
+                         double discount=0.99,
+                         double atol=1e-8):
+    """Computes q-values using sparse q-iteration.
+
+    Args:
+      tabular_env: A cython TabularEnv environment.
+      reward: A dS x dA reward matrix
+      warmstart_q: A dS x dA array of initial q-values.
+      num_itrs: Number of iterations to run.
+      ent_wt: Entropy weight. Default 0.
+      discount: Discount factor.
+      atol: Absolute error tolerance for early stopping.
+        If atol < 0, this will always run for num_itrs iterations.
+
+    Returns:
+      A dS x dA array of Q-values
+    """
+    cdef int ds, da, s, a, i, ns_idx, ns
+    ds = tabular_env.num_states
+    da = tabular_env.num_actions
+
+    q_values_np = np.zeros((ds, da), dtype=np.float64)
+    if warmstart_q is not None:
+        q_values_np[:, :] = warmstart_q
+    cdef double[:, :] q_values = q_values_np
+
+    cdef double[:,:] custom_reward = reward
+
+    new_q_values_np = np.zeros((ds, da), dtype=np.float64)
+    cdef double[:, :] new_q_values = new_q_values_np
+
+    v_fn_np = np.zeros((ds), dtype=np.float64)
+    cdef double[:] v_fn = v_fn_np
+
+    for i in range(num_itrs):
+        compute_value_function(q_values, v_fn, ds, da, ent_wt)
+
+        new_q_values[:, :] = 0.0
+        for s in range(ds):
+            for a in range(da):
+                transitions = tabular_env.transitions_cy(s, a)
+                transitions_end = transitions.end()
+                transitions_it = transitions.begin()
+                r = custom_reward[s, a]
+                while transitions_it != transitions_end:
+                    ns = dereference(transitions_it).first
+                    p = dereference(transitions_it).second
+                    new_q_values[s, a] += p * (r + discount * v_fn[ns])
                     preincrement(transitions_it)
         if atol > 0:
             diff = max_abs_error(new_q_values, q_values, ds, da)
