@@ -256,7 +256,7 @@ cdef class CliffwalkEnv(TabularEnv):
 
 cdef class RandomTabularEnv(TabularEnv):
     def __init__(self, int num_states=3, int num_actions=2, double t_sparsity=0.75, int seed=0,
-                double reward_scale=1.0, bint self_loop=1):
+                bint self_loop=1):
         super(RandomTabularEnv, self).__init__(num_states, num_actions, {0: 1.0})
 
         with np_seed(seed):
@@ -271,9 +271,9 @@ cdef class RandomTabularEnv(TabularEnv):
                     transition_matrix[s, 0, s] = 1000.0
             transition_matrix = transition_matrix/np.sum(transition_matrix, axis=2, keepdims=True)
             self._transition_matrix = transition_matrix
-            rewards = np.random.randn(num_states, num_actions) * reward_scale
-            zero_idxs = np.random.randint(0, num_states, size=int(num_states*t_sparsity))
-            rewards[zero_idxs] = 0.0
+            rewards = np.zeros((num_states, num_actions))
+            reward_state = np.random.randint(1, num_states)
+            rewards[reward_state, :] = 1.0
             self._reward_matrix = rewards
 
     cdef map[int, double] transitions_cy(self, int state, int action):
@@ -292,13 +292,7 @@ cdef class RandomTabularEnv(TabularEnv):
 
 cdef class InvertedPendulum(TabularEnv):
     """ 
-
     Dynamics and reward are based on OpenAI gym's implementation of Pendulum-v0
-
-    Args:
-      num_states: Number of states 
-      transition_noise: A float in [0, 1] representing the chance that the
-        agent will be transported to the start state.
     """
 
     def __init__(self, int state_discretization=64, int action_discretization=5):
@@ -379,3 +373,71 @@ cdef class InvertedPendulum(TabularEnv):
         th = pend_state.theta
         thv = pend_state.thetav
         print('(%f, %f) = %d' % (th, thv, self.get_state()))
+
+
+cdef class MountainCar(TabularEnv):
+    """ 
+    Dynamics and reward are based on OpenAI gym's implementation of MountainCar-v0
+    """
+
+    def __init__(self, int state_discretization=64, int action_discretization=5):
+        self._state_disc = state_discretization
+        self._action_disc = action_discretization
+        self.max_vel = 0.06
+        self.min_vel = -self.max_vel
+        self.max_pos = 0.6
+        self.min_pos = -1.2
+        self.goal_pos = 0.5
+
+        self._state_step = (self.max_pos-self.min_pos) / state_discretization
+        self._vel_step = (self.max_vel-self.min_vel)/state_discretization
+
+        cdef int initial_state = self.to_state_id(MountainCarState(-0.5, 0))
+        super(MountainCar, self).__init__(state_discretization*state_discretization, 3, {initial_state: 1.0})
+        self.observation_space = gym.spaces.Box(low=np.array([self.min_pos,-self.max_vel]), high=np.array([self.max_pos,self.max_vel]), dtype=np.float32)
+
+    cdef map[int, double] transitions_cy(self, int state, int action):
+        self._transition_map.clear()
+        state_vec = self.from_state_id(state)
+        position, velocity = state_vec.pos, state_vec.vel
+        for _ in range(3):
+            velocity += (action-1)*0.001 + cos(3*position)*(-0.0025)
+            velocity = fmax(fmin(velocity, self.max_vel-1e-8), self.min_vel)
+            position += velocity
+            position = fmax(fmin(position, self.max_pos-1e-8), self.min_pos)
+            if (position==self.min_pos and velocity<0):
+                velocity = 0
+        next_state = self.to_state_id(MountainCarState(position, velocity))
+        self._transition_map.insert(pair[int, double](next_state, 1.0))
+        return self._transition_map
+
+    cpdef double reward(self, int state, int action, int next_state):
+        state_vec = self.from_state_id(state)
+        if state_vec.pos >= self.goal_pos:
+            return 1.0
+        return 0.0
+    
+    cpdef observation(self, int state):
+        pstate = self.from_state_id(state)
+        return np.array([pstate.pos, pstate.vel], dtype=np.float32)
+
+    cdef MountainCarState from_state_id(self, int state):
+        cdef int th_idx = state % self._state_disc
+        cdef int vel_idx = state // self._state_disc
+        th = self.min_pos + self._state_step * th_idx
+        thv = self.min_vel + self._vel_step * vel_idx 
+        return MountainCarState(th, thv)
+
+    cdef int to_state_id(self, MountainCarState state_vec):
+        pos = state_vec.pos
+        vel = state_vec.vel
+        # round
+        cdef int pos_idx = int(floor((pos-self.min_pos)/self._state_step))
+        cdef int vel_idx = int(floor((vel-self.min_vel)/self._vel_step))
+        return pos_idx + self._state_disc * vel_idx
+
+    cpdef render(self):
+        state_vec = self.from_state_id(self.get_state())
+        x1 = state_vec.pos
+        x2 = state_vec.vel
+        print('(%f, %f) = %d' % (x1, x2, self.get_state()))

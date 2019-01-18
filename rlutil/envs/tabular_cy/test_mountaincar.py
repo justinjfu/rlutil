@@ -8,8 +8,8 @@ from rlutil.envs.tabular_cy import q_iteration_py
 
 class QIterationTest(unittest.TestCase):
     def setUp(self):
-        self.env = tabular_env.InvertedPendulum(state_discretization=512)
-        self.env_small = tabular_env.InvertedPendulum(state_discretization=32, action_discretization=5)
+        self.env = tabular_env.MountainCar(state_discretization=512)
+        self.env_small = tabular_env.MountainCar(state_discretization=56)
 
     def test_random_rollout(self):
         self.env.reset()
@@ -20,17 +20,16 @@ class QIterationTest(unittest.TestCase):
     def test_q_iteration(self):
         params = {
             'num_itrs': 1000,
-            'ent_wt': 0.0,
+            'ent_wt': 0.1,
             'discount': 0.95,
         }
         qvals = q_iteration.softq_iteration(self.env_small, **params)
         self.env_small.reset()
-        for _ in range(200):
+        for _ in range(50):
             #self.env_small.render()
             a_qvals = qvals[self.env_small.get_state()]
             _, rew, _, _ = self.env_small.step(np.argmax(a_qvals))
-            #print(rew)
-        self.assertEqual(rew, 1.0)
+        self.assertEqual(rew, 1.0) 
 
 if __name__ == '__main__':
     unittest.main()

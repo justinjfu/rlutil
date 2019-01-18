@@ -36,9 +36,11 @@ cdef class RandomTabularEnv(TabularEnv):
     cdef double[:,:,:] _transition_matrix
     cdef double[:,:] _reward_matrix
 
+
 cdef struct PendulumState:
     double theta
     double thetav
+
 
 cdef class InvertedPendulum(TabularEnv):
     cdef int _state_disc
@@ -55,3 +57,21 @@ cdef class InvertedPendulum(TabularEnv):
     cdef PendulumState from_state_id(self, int state)
     cdef int to_state_id(self, PendulumState pend_state)
     cdef double action_to_torque(self, int action)
+
+cdef struct MountainCarState:
+    double pos
+    double vel
+    
+cdef class MountainCar(TabularEnv):
+    cdef int _state_disc
+    cdef int _action_disc
+    cdef double max_vel
+    cdef double min_vel
+    cdef double max_pos
+    cdef double min_pos
+    cdef double goal_pos
+    cdef double _state_step
+    cdef double _vel_step
+    cdef MountainCarState from_state_id(self, int state)
+    cdef int to_state_id(self, MountainCarState pend_state)
+
