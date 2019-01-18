@@ -380,20 +380,21 @@ cdef class MountainCar(TabularEnv):
     Dynamics and reward are based on OpenAI gym's implementation of MountainCar-v0
     """
 
-    def __init__(self, int state_discretization=64, int action_discretization=5):
-        self._state_disc = state_discretization
+    def __init__(self, int posdisc=64, int veldisc=64, int action_discretization=5):
+        self._pos_disc = posdisc
+        self._vel_disc = veldisc
         self._action_disc = action_discretization
-        self.max_vel = 0.06
+        self.max_vel = 0.06 # gym 0.07
         self.min_vel = -self.max_vel
-        self.max_pos = 0.6
-        self.min_pos = -1.2
+        self.max_pos = 0.55 # gym 0.6
+        self.min_pos = -1.2 # gym -1.2
         self.goal_pos = 0.5
 
-        self._state_step = (self.max_pos-self.min_pos) / state_discretization
-        self._vel_step = (self.max_vel-self.min_vel)/state_discretization
+        self._state_step = (self.max_pos-self.min_pos) / self._pos_disc
+        self._vel_step = (self.max_vel-self.min_vel)/self._vel_disc
 
         cdef int initial_state = self.to_state_id(MountainCarState(-0.5, 0))
-        super(MountainCar, self).__init__(state_discretization*state_discretization, 3, {initial_state: 1.0})
+        super(MountainCar, self).__init__(self._pos_disc*self._vel_disc, 3, {initial_state: 1.0})
         self.observation_space = gym.spaces.Box(low=np.array([self.min_pos,-self.max_vel]), high=np.array([self.max_pos,self.max_vel]), dtype=np.float32)
 
     cdef map[int, double] transitions_cy(self, int state, int action):
@@ -422,8 +423,8 @@ cdef class MountainCar(TabularEnv):
         return np.array([pstate.pos, pstate.vel], dtype=np.float32)
 
     cdef MountainCarState from_state_id(self, int state):
-        cdef int th_idx = state % self._state_disc
-        cdef int vel_idx = state // self._state_disc
+        cdef int th_idx = state % self._pos_disc
+        cdef int vel_idx = state // self._pos_disc
         th = self.min_pos + self._state_step * th_idx
         thv = self.min_vel + self._vel_step * vel_idx 
         return MountainCarState(th, thv)
@@ -434,7 +435,7 @@ cdef class MountainCar(TabularEnv):
         # round
         cdef int pos_idx = int(floor((pos-self.min_pos)/self._state_step))
         cdef int vel_idx = int(floor((vel-self.min_vel)/self._vel_step))
-        return pos_idx + self._state_disc * vel_idx
+        return pos_idx + self._pos_disc * vel_idx
 
     cpdef render(self):
         state_vec = self.from_state_id(self.get_state())
