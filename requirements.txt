@@ -3,3 +3,4 @@ parameterized
 gym
 path.py
 plotly
+pandas
