@@ -26,7 +26,7 @@ class QIterationTest(unittest.TestCase):
         qvals = q_iteration.softq_iteration(self.env_small, **params)
         self.env_small.reset()
         for _ in range(50):
-            self.env_small.render()
+            #self.env_small.render()
             a_qvals = qvals[self.env_small.get_state()]
             _, rew, _, _ = self.env_small.step(np.argmax(a_qvals))
         self.assertEqual(rew, 1.0) 

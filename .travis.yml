@@ -1,0 +1,37 @@
+language: python
+
+
+env:
+  - PYTHON=2.7 DEPS=latest DOCTESTS=true
+  - PYTHON=2.7 DEPS=pinned DOCTESTS=false
+  - PYTHON=2.7 DEPS=latest DOCTESTS=true
+  - PYTHON=3.5 DEPS=latest DOCTESTS=true
+  - PYTHON=3.6 DEPS=latest DOCTESTS=true
+  - PYTHON=3.6 DEPS=latest DOCTESTS=true
+  - PYTHON=3.6 DEPS=minimal DOCTESTS=false
+
+
+before_install:
+  - sudo apt-get update -yq
+  - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+
+
+install:
+  - conda create -n testenv pip python=$PYTHON
+  - source activate testenv
+  - cat testing/deps_${DEPS}.txt testing/utils.txt > deps.txt
+  - conda install --file deps.txt
+  - pip install .
+
+script:
+  - make test
+
+after_success:
+    - pip install codecov
+    codecov
