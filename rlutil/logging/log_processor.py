@@ -67,8 +67,11 @@ def iterate_experiments(root_dir, filter_fn=None):
             print('WARN: empty log file in %s' % log_dir)
             continue
 
-
         yield ExperimentLog(params, progress, log_dir)
+
+
+def filter_params(exp_logs, params_key, params_value):
+    return [log for log in exp_logs if log.params[params_key] == params_value]
 
 
 def partition_params(all_experiments, split_key):
@@ -84,14 +87,36 @@ def partition_params(all_experiments, split_key):
     return partition_params
 
 
-def reduce_last(l):
+def reduce_last(l, **kwargs):
     return l[-1]
 
-def reduce_first(l):
+def reduce_first(l, **kwargs):
     return l[0]
 
-def reduce_mean(l):
+def reduce_mean(l, **kwargs):
     return np.mean(l)
+
+
+def to_data_frame(exps, reduce_fn=reduce_last, ignore_params=('uuid', '__clsname__')):
+    """
+    Aggregate partitions into a pandas data frame.
+    The column keys will be the log values, and the row keys (stored in the 'split_key' column) will be the split key values.
+
+    reduce_fn reduces along the progress file. The default is reduce_last (use the last value logged)
+    aggregate_fn reduces along experiments. The default is reduce_mean (average the value of reduce_fn across experiments)
+    """
+    val_keys = list(exps[0].progress.keys())
+    param_keys = list(exps[0].params.keys())
+    param_keys = [key for key in param_keys if key not in ignore_params]
+
+    row_key_to_val = collections.defaultdict(list)
+    for exp in exps:
+        for val_key in val_keys:
+            row_key_to_val[val_key].append(reduce_fn(exp.progress[val_key], key=val_key))
+        for param_key in param_keys:
+            row_key_to_val[param_key].append(exp.params[param_key])
+    frame = pandas.DataFrame(data=row_key_to_val)
+    return frame
 
 
 def aggregate_partitions(partitions, reduce_fn=reduce_last, aggregate_fn=reduce_mean):
@@ -109,7 +134,7 @@ def aggregate_partitions(partitions, reduce_fn=reduce_last, aggregate_fn=reduce_
     for col_key in col_keys:
         exps = partitions[col_key]
         # aggregate exps
-        aggs = {row_key: aggregate_fn([reduce_fn(exp.progress[row_key]) for exp in exps]) for row_key in rows}
+        aggs = {row_key: aggregate_fn([reduce_fn(exp.progress[row_key], key=row_key) for exp in exps]) for row_key in rows}
         
         for row_key in aggs:
             row_key_to_val[row_key].append(aggs[row_key])
@@ -118,6 +143,41 @@ def aggregate_partitions(partitions, reduce_fn=reduce_last, aggregate_fn=reduce_
     frame = pandas.DataFrame(data=row_key_to_val)
     return frame
 
+
+def reduce_mean_key(frame, col_key):
+    col_vals = list(set(frame[col_key]))
+    new_rows = []
+    for col_val in col_vals:
+        exps = frame.loc[frame[col_key] == col_val]
+        new_rows.append(exps.mean())
+    new_frame = pandas.DataFrame(data=new_rows)
+    new_frame[col_key] = col_vals
+    return new_frame
+
+
+def rename_partitions(frame, mapping, col_key='split_key'):
+    col_vals = frame[col_key]
+    col_vals_renamed = [mapping.get(col_val, col_val) for col_val in col_vals]
+    frame[col_key] = col_vals_renamed
+    return frame
+
+def rename_values(frame, mapping):
+    columns_renamed = [mapping.get(col_val, col_val) for col_val in frame.columns]
+    frame.columns = columns_renamed
+    return frame
+
+def label_scatter_points(x, y, val, ax, global_x_offset=0.02, global_y_offset=0.0, offsets={}):
+    """Add labels to points in a scatterplot"""
+    a = pandas.concat({'x': x, 'y': y, 'val': val}, axis=1)
+    for i, point in a.iterrows():
+        offset_x = global_x_offset
+        offset_y = global_y_offset
+        k = str(point['val'])
+        if k in offsets:
+            offset = offsets[k]
+            offset_x += offset[0]
+            offset_y += offset[1]
+        ax.text(point['x']+offset_x, point['y']+offset_y, k)
 
 if __name__ == "__main__":
     import sys
