@@ -1,4 +1,9 @@
 # rlutil
+
+[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/justinjfu/rlutil.svg?branch=master)](https://travis-ci.org/justinjfu/rlutil)
+[![codecov](https://codecov.io/gh/justinjfu/rlutil/branch/master/graph/badge.svg)](https://codecov.io/gh/justinjfu/rlutil)
+
 A collection of common code for RL projects.
 
 # Setup
