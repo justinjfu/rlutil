@@ -8,6 +8,7 @@ import json
 import csv
 import numpy as np
 import pandas
+import itertools
 
 
 def _find_logs_recursive(root_dir):
@@ -78,14 +79,24 @@ def partition_params(all_experiments, split_key):
     """
     Partitions parameters into groups according to split_key
 
+    Args:
+        all_experiments: An iterator through ExperimentLog objects
+        split_key: A string (or tuple) of keys to group by. 
+
     Returns:
         A dictionary from values of split_key to lists of ExperimentLog objects
     """
     partition_params = collections.defaultdict(list)
     for exp in all_experiments:
-        partition_params[exp.params[split_key]].append(exp)
+        if isinstance(split_key, (list, tuple)):
+            exp_key_val = (exp.params[k] for k in split_key)
+        else:
+            exp_key_val = exp.params[split_key]
+        partition_params[exp.params[exp_key_val]].append(exp)
     return partition_params
 
+def normalize_loss(all_experiments, loss_key=None, env_key=None):
+    raise NotImplementedError()
 
 def reduce_last(l, **kwargs):
     return l[-1]
@@ -99,11 +110,9 @@ def reduce_mean(l, **kwargs):
 
 def to_data_frame(exps, reduce_fn=reduce_last, ignore_params=('uuid', '__clsname__')):
     """
-    Aggregate partitions into a pandas data frame.
-    The column keys will be the log values, and the row keys (stored in the 'split_key' column) will be the split key values.
+    Convert experiments to a pandas data frame, reducing along the experiment iterations. 
 
     reduce_fn reduces along the progress file. The default is reduce_last (use the last value logged)
-    aggregate_fn reduces along experiments. The default is reduce_mean (average the value of reduce_fn across experiments)
     """
     val_keys = list(exps[0].progress.keys())
     param_keys = list(exps[0].params.keys())
@@ -115,6 +124,27 @@ def to_data_frame(exps, reduce_fn=reduce_last, ignore_params=('uuid', '__clsname
             row_key_to_val[val_key].append(reduce_fn(exp.progress[val_key], key=val_key))
         for param_key in param_keys:
             row_key_to_val[param_key].append(exp.params[param_key])
+    frame = pandas.DataFrame(data=row_key_to_val)
+    return frame
+
+
+def timewise_data_frame(exps, time_key='iteration', time_max=None, time_min=0, ignore_params=('uuid', '__clsname__')):
+    val_keys = list(exps[0].progress.keys())
+    param_keys = list(exps[0].params.keys())
+    param_keys = [key for key in param_keys if key not in ignore_params]
+
+    row_key_to_val = collections.defaultdict(list)
+    for exp in exps:
+        exp_len = len(exp.progress[val_keys[0]])
+        if time_max is not None:
+            exp_len = min(time_max, exp_len)
+            
+        for timestep in range(time_min, exp_len):
+            for val_key in val_keys:
+                row_key_to_val[val_key].append(exp.progress[val_key][timestep])
+            for param_key in param_keys:
+                row_key_to_val[param_key].append(exp.params[param_key])
+            row_key_to_val[time_key].append(timestep)
     frame = pandas.DataFrame(data=row_key_to_val)
     return frame
 
@@ -152,6 +182,24 @@ def reduce_mean_key(frame, col_key):
         new_rows.append(exps.mean())
     new_frame = pandas.DataFrame(data=new_rows)
     new_frame[col_key] = col_vals
+    return new_frame
+
+
+def reduce_mean_keys(frame, col_keys):
+    ckey2cvals = [list(set(frame[k])) for k in col_keys]
+    all_vals = itertools.product(*ckey2cvals)
+    new_rows = []
+    for val in all_vals:
+        cur_frame = frame
+        for i in range(len(col_keys)):
+            col_key = col_keys[i]
+            col_val = val[i]
+            cur_frame = cur_frame.loc[cur_frame[col_key] == col_val]
+        cur_frame = cur_frame.mean()
+        for i in range(len(col_keys)):
+            cur_frame[col_keys[i]] = val[i]
+        new_rows.append(cur_frame)
+    new_frame = pandas.DataFrame(data=new_rows)
     return new_frame
 
 
