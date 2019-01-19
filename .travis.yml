@@ -21,8 +21,7 @@ before_install:
 install:
   - conda create -n testenv pip python=$PYTHON
   - source activate testenv
-  - conda install --file requirements.txt
-  - pip install .
+  - pip install -r requirements.txt
 
 script:
   - make test
