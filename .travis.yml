@@ -23,6 +23,9 @@ install:
   - source activate testenv
   - pip install -r requirements.txt
 
+before_script:
+  - make build
+
 script:
   - make test
 
