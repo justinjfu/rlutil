@@ -2,13 +2,9 @@ language: python
 
 
 env:
-  - PYTHON=2.7 DEPS=latest DOCTESTS=true
-  - PYTHON=2.7 DEPS=pinned DOCTESTS=false
-  - PYTHON=2.7 DEPS=latest DOCTESTS=true
-  - PYTHON=3.5 DEPS=latest DOCTESTS=true
-  - PYTHON=3.6 DEPS=latest DOCTESTS=true
-  - PYTHON=3.6 DEPS=latest DOCTESTS=true
-  - PYTHON=3.6 DEPS=minimal DOCTESTS=false
+  - PYTHON=2.7 DOCTESTS=true
+  - PYTHON=3.5 DOCTESTS=true
+  - PYTHON=3.6 DOCTESTS=true
 
 
 before_install:
@@ -25,8 +21,7 @@ before_install:
 install:
   - conda create -n testenv pip python=$PYTHON
   - source activate testenv
-  - cat testing/deps_${DEPS}.txt testing/utils.txt > deps.txt
-  - conda install --file deps.txt
+  - conda install --file requirements.txt
   - pip install .
 
 script:
