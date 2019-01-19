@@ -21,12 +21,14 @@ install:
   - conda create -n testenv pip python=$PYTHON
   - source activate testenv
   - pip install -r requirements.txt
+  - pip install pytest pytest-cov
 
 before_script:
   - make build
 
 script:
   - make test
+  - make coverage
 
 after_success:
   - pip install codecov
