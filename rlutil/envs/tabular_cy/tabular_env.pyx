@@ -260,8 +260,15 @@ cdef class RandomTabularEnv(TabularEnv):
         super(RandomTabularEnv, self).__init__(num_states, num_actions, {0: 1.0})
 
         with np_seed(seed):
+            rewards = np.zeros((num_states, num_actions))
+            reward_state = np.random.randint(1, num_states)
+            rewards[reward_state, :] = 1.0
+            self._reward_matrix = rewards
+
             transition_matrix = np.zeros((num_states, num_actions, num_states), dtype=np.float64)
             scores = np.random.rand(num_states, num_actions, num_states).astype(np.float64)
+            scores[:, :, reward_state] *= 0.999  # reduce chance of link to goal
+
             for s in range(num_states):
                 for a in range(num_actions):
                     top_states = np.argsort(scores[s, a, :])[-transitions_per_action:]
@@ -273,10 +280,6 @@ cdef class RandomTabularEnv(TabularEnv):
                     transition_matrix[s, 0, s] = 1.0
             transition_matrix = transition_matrix/np.sum(transition_matrix, axis=2, keepdims=True)
             self._transition_matrix = transition_matrix
-            rewards = np.zeros((num_states, num_actions))
-            reward_state = np.random.randint(1, num_states)
-            rewards[reward_state, :] = 1.0
-            self._reward_matrix = rewards
 
     cdef map[int, double] transitions_cy(self, int state, int action):
         self._transition_map.clear()
