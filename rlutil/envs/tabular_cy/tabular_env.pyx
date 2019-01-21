@@ -255,20 +255,22 @@ cdef class CliffwalkEnv(TabularEnv):
 
 
 cdef class RandomTabularEnv(TabularEnv):
-    def __init__(self, int num_states=3, int num_actions=2, double t_sparsity=0.75, int seed=0,
-                bint self_loop=1):
+    def __init__(self, int num_states=3, int num_actions=2, int transitions_per_action=4, int seed=0,
+                bint self_loop=0):
         super(RandomTabularEnv, self).__init__(num_states, num_actions, {0: 1.0})
 
         with np_seed(seed):
-            transition_matrix = np.random.rand(num_states, num_actions, num_states).astype(np.float64)
-            transition_matrix = np.exp(transition_matrix)
-
+            transition_matrix = np.zeros((num_states, num_actions, num_states), dtype=np.float64)
+            scores = np.random.rand(num_states, num_actions, num_states).astype(np.float64)
             for s in range(num_states):
                 for a in range(num_actions):
-                    zero_idxs = np.random.randint(0, num_states, size=int(num_states*t_sparsity))
-                    transition_matrix[s, a, zero_idxs] = 0.0
+                    top_states = np.argsort(scores[s, a, :])[-transitions_per_action:]
+                    for ns in top_states:
+                        transition_matrix[s, a, ns] = 1.0/float(transitions_per_action)
                 if self_loop:
-                    transition_matrix[s, 0, s] = 1000.0
+                    for ns in range(num_states):
+                        transition_matrix[s, 0, ns] = 0.0
+                    transition_matrix[s, 0, s] = 1.0
             transition_matrix = transition_matrix/np.sum(transition_matrix, axis=2, keepdims=True)
             self._transition_matrix = transition_matrix
             rewards = np.zeros((num_states, num_actions))

@@ -7,6 +7,7 @@ import collections
 import json
 import csv
 import numpy as np
+import scipy.stats
 import pandas
 import itertools
 
@@ -89,10 +90,10 @@ def partition_params(all_experiments, split_key):
     partition_params = collections.defaultdict(list)
     for exp in all_experiments:
         if isinstance(split_key, (list, tuple)):
-            exp_key_val = (exp.params[k] for k in split_key)
+            exp_key_val = tuple((exp.params[k] for k in split_key))
         else:
             exp_key_val = exp.params[split_key]
-        partition_params[exp.params[exp_key_val]].append(exp)
+        partition_params[exp_key_val].append(exp)
     return partition_params
 
 def normalize_loss(all_experiments, loss_key=None, env_key=None):
@@ -106,6 +107,9 @@ def reduce_first(l, **kwargs):
 
 def reduce_mean(l, **kwargs):
     return np.mean(l)
+
+def reduce_trimmed_mean(l, **kwargs):
+    return scipy.stats.trim_mean(l, 0.1)
 
 
 def to_data_frame(exps, reduce_fn=reduce_last, ignore_params=('uuid', '__clsname__')):
