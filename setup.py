@@ -19,6 +19,7 @@ extensions = []
 tabular_pkg = ['rlutil', 'envs', 'tabular_cy']
 extensions.append(make_extension(tabular_pkg, 'tabular_env'))
 extensions.append(make_extension(tabular_pkg, 'q_iteration'))
+extensions.append(make_extension(tabular_pkg, 'env_wrapper'))
 
 # Tabular gridworld
 grid_pkg = ['rlutil', 'envs', 'gridcraft']

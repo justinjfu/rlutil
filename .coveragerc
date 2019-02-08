@@ -1,2 +1,3 @@
 [run]
 source=rlutil/
+omit = */test*.py
