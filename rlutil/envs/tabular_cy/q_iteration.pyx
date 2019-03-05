@@ -48,6 +48,42 @@ cdef compute_value_function(double[:, :] q_values, double[:] values, int ds, int
 
 
 @cython.boundscheck(False)
+@cython.cdivision(True)
+cdef compute_value_function_masked(double[:, :] q_values, double[:] values, int ds, int da, double ent_wt, double[:,:] mask):
+    r"""Computes the value function by maxing over the q-values.
+
+    Args:
+      q_values: A dS x dA array of q-values.
+      values: A dS array where the result will be stored
+      ds: Number of states
+      da: Number of actions
+      ent_wt: Entropy weight. Default 0.
+    """
+    cdef int s, a
+    cdef double max_val, total
+
+    if ent_wt > 0:
+        for s in range(ds):
+            max_val = q_values[s, 0]
+            for a in range(da):
+                if mask[s,a] > 0:
+                    max_val = fmax(max_val, q_values[s,a])
+
+            total = 0
+            for a in range(da):
+                if mask[s,a] > 0:
+                    total += exp((q_values[s, a] - max_val)/ent_wt)
+            values[s] = max_val + ent_wt * log(total)
+    else:
+        for s in range(ds):
+            max_val = q_values[s, 0]
+            for a in range(da):
+                if mask[s,a] > 0:
+                    max_val = fmax(max_val, q_values[s,a])
+            values[s] = max_val
+
+
+@cython.boundscheck(False)
 cdef double max_abs_error(double[:, :] q1, double[:, :] q2, int ds, int da):
     """Compute max absolute error between two q values for early stopping."""
     cdef double max_error
@@ -126,6 +162,7 @@ cpdef q_iteration_sparse_python(tabular_env,
 @cython.boundscheck(False)
 cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
                          warmstart_q=None,
+                         mask=None,
                          int num_itrs=100,
                          double ent_wt=0.0,
                          double discount=0.99,
@@ -153,6 +190,11 @@ cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
         q_values_np[:, :] = warmstart_q
     cdef double[:, :] q_values = q_values_np
 
+    
+    cdef double[:, :] mask_;
+    if mask is not None:
+        mask_ = mask
+
     new_q_values_np = np.zeros((ds, da), dtype=np.float64)
     cdef double[:, :] new_q_values = new_q_values_np
 
@@ -160,7 +202,10 @@ cpdef softq_iteration(tabular_env.TabularEnv tabular_env,
     cdef double[:] v_fn = v_fn_np
 
     for i in range(num_itrs):
-        compute_value_function(q_values, v_fn, ds, da, ent_wt)
+        if mask is not None:
+            compute_value_function_masked(q_values, v_fn, ds, da, ent_wt, mask=mask_)
+        else:
+            compute_value_function(q_values, v_fn, ds, da, ent_wt)
 
         new_q_values[:, :] = 0.0
         for s in range(ds):
