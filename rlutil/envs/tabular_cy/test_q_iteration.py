@@ -20,6 +20,30 @@ class QIterationTest(unittest.TestCase):
     qvals_cy = q_iteration.softq_iteration(self.env, **params)
     self.assertTrue(np.allclose(qvals_cy, qvals_py))
 
+  def test_qevaluation_noent(self):
+    env = tabular_env.CliffwalkEnv(num_states=2, transition_noise=0.00)
+    params = {
+        'num_itrs': 100,
+        'ent_wt': 0.0,
+        'discount': 0.5,
+    }
+    q_values = np.zeros((env.num_states, env.num_actions))
+    q_values[:, 1] = 1e10
+    returns, _ = q_iteration.softq_evaluation(env, q_values, **params)
+    self.assertAlmostEqual(returns, 0.66666666)
+
+  def test_qevaluation_ent(self):
+    env = tabular_env.CliffwalkEnv(num_states=2, transition_noise=0.00)
+    params = {
+        'num_itrs': 100,
+        'ent_wt': 0.001,
+        'discount': 0.5,
+    }
+    q_values = np.zeros((env.num_states, env.num_actions))
+    q_values[:, 1] = 1e10
+    returns, _ = q_iteration.softq_evaluation(env, q_values, **params)
+    self.assertAlmostEqual(returns, 0.66666666)
+
   def test_visitations(self):
     env = tabular_env.CliffwalkEnv(num_states=3, transition_noise=0.00)
     params = {

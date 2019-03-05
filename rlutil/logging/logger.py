@@ -22,6 +22,7 @@ _tabular_prefixes = []
 _tabular_prefix_str = ''
 
 _tabular = []
+_tabular_keys = None
 
 _text_outputs = []
 _tabular_outputs = []
@@ -36,6 +37,11 @@ _snapshot_gap = 1
 
 _log_tabular_only = False
 _header_printed = False
+
+
+def reset():
+    global _tabular_keys
+    _tabular_keys = None
 
 
 def _add_output(file_name, arr, fds, mode='a'):
@@ -129,6 +135,8 @@ def log(s, with_prefix=True, with_timestamp=True, color=None):
 
 
 def record_tabular(key, val):
+    if (_tabular_keys is not None) and (key not in _tabular_keys):
+        raise ValueError("Unknown key:", key)
     _tabular.append((_tabular_prefix_str + str(key), str(val)))
 
 
@@ -186,6 +194,7 @@ table_printer = TerminalTablePrinter()
 
 
 def dump_tabular(*args, **kwargs):
+    global _tabular_keys
     wh = kwargs.pop("write_header", None)
     if len(_tabular) > 0:
         if _log_tabular_only:
@@ -194,6 +203,11 @@ def dump_tabular(*args, **kwargs):
             for line in tabulate(_tabular).split('\n'):
                 log(line, *args, **kwargs)
         tabular_dict = dict(_tabular)
+        if _tabular_keys is None:
+            _tabular_keys = tabular_dict.keys()
+        else:
+            assert len(tabular_dict) == len(_tabular_keys)
+
         # Also write to the csv files
         # This assumes that the keys in each iteration won't change!
         for tabular_fd in list(_tabular_fds.values()):

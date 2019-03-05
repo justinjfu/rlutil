@@ -73,6 +73,7 @@ def record_tabular_moving(key, value, n=100, fill_value=0.0):
     rllablogger.record_tabular(key+'_%d_step_mean' % n, np.mean(vals))
 
 def reset_logger():
+    rllablogger.reset()
     KEY_TO_VALUES.clear()
 
 
