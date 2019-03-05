@@ -84,6 +84,8 @@ class GridEnv(gym.Env):
                  rew_map=None,
                  terminal_states=None,
                  default_rew=0):
+        self.num_states = len(gridspec)
+        self.num_actions = 5
         self._env_args = {'teps': teps, 'max_timesteps': max_timesteps}
         self.gs = gridspec
         self.model = TransitionModel(gridspec, eps=teps)
