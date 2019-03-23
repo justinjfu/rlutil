@@ -1,6 +1,7 @@
 import rlutil.torch.nn
 from rlutil.torch.pytorch_util import set_gpu, default_device, to_numpy
 from types import ModuleType
+import torch.optim as optim
 
 def _replace_funcs(global_dict):
     import torch as th
