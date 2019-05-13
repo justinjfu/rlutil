@@ -31,13 +31,13 @@ class Wrapper(Env):
         return self.wrapped_env.observation_space
 
     def step(self, action):
-        return self.env.step(action)
+        return self._wrapped_env.step(action)
 
-    def reset(self):
-        return self.env.reset()
+    def reset(self, **kwargs):
+        return self._wrapped_env.reset(**kwargs)
 
     def render(self, **kwargs):
-        return self.wrapped_env.render(**kwargs)
+        return self._wrapped_env.render(**kwargs)
 
     def __str__(self):
         return '<{}{}>'.format(type(self).__name__, self.env)
